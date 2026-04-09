@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright Mastery Series Volume 1</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-decoration: none; }
+    .lead { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0 22px;
+    }
+    .toc {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 28px;
+    }
+    .lesson { break-inside: avoid-page; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.95em; }
+    .footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .toc, .note, .lesson { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright Mastery Series Volume 1</h1>
+    <p class="lead">Core power skills: API plus UI, mocking, auth, frames, advanced locators, test data, and scalable fixtures.</p>
+    <div class="note">This volume moves from basic UI automation into the patterns that make a framework faster, cleaner, and easier to scale.</div>
+    <div class="toc">
+      <h3>Table Of Contents</h3>
+      <ol><li><a href="#lesson-01">1. API + UI Testing Together</a></li><li><a href="#lesson-02">2. Network Interception And Mocking</a></li><li><a href="#lesson-03">3. Authentication Patterns</a></li><li><a href="#lesson-04">4. Frames, Popups, And Multi-Page Workflows</a></li><li><a href="#lesson-05">5. Advanced Locator Strategy</a></li><li><a href="#lesson-06">6. Test Data Strategy</a></li><li><a href="#lesson-07">7. Scalable Fixture Design</a></li></ol>
+    </div>
+    <section class="lesson" id="lesson-01"><h2>1. API + UI Testing Together</h2><p>Playwright is not only a browser tool. It can make HTTP requests, seed data, clean up data, and then verify the UI against the backend state. That combination is one of its strongest real-world advantages.</p><h3>Why It Matters</h3><p>If every test prepares data through the UI, the suite gets slow and fragile. Using the API for setup and the UI for validation gives you faster, more focused tests.</p><h3>What To Know</h3><ul><li>Use the request fixture for setup and cleanup.</li><li>Keep the UI test focused on the behavior you actually care about.</li><li>Seed data through POST calls and verify it through the page.</li><li>Use API cleanup to remove leftovers and reduce flaky shared-state failures.</li></ul><h3>Recommended Workflow</h3><ol><li>Create the data through an API call.</li><li>Open the page that should display that data.</li><li>Assert the UI shows the expected result.</li><li>Clean up the record through API if the environment requires it.</li></ol><h3>Example: create a todo through API, verify through UI</h3><pre><code class="language-ts">import { test, expect } from &#39;@playwright/test&#39;;
+
+test(&#39;new todo is visible in the UI&#39;, async ({ request, page }) =&gt; {
+  const response = await request.post(&#39;https://example.com/api/todos&#39;, {
+    data: { title: &#39;Learn Playwright hybrid tests&#39; },
+  });
+
+  expect(response.ok()).toBeTruthy();
+
+  await page.goto(&#39;https://example.com/todos&#39;);
+  await expect(page.getByText(&#39;Learn Playwright hybrid tests&#39;)).toBeVisible();
+});</code></pre><h3>Common Mistakes</h3><ul><li>Using the UI to set up ten steps before the assertion you care about.</li><li>Skipping response validation and assuming API setup succeeded.</li><li>Leaving data behind so later tests collide with it.</li></ul><h3>Practice Ideas</h3><ul><li>Pick one existing UI test and replace the setup part with API seeding.</li><li>Add cleanup through API for the same scenario.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain when API setup is better than UI setup.</li><li>You can write one API seed plus one UI verification test.</li></ul></section><section class="lesson" id="lesson-02"><h2>2. Network Interception And Mocking</h2><p>Sometimes you want the browser to behave as if the backend returned a different response, failed, or responded slowly. Playwright lets you intercept requests with page.route and shape those responses intentionally.</p><h3>Why It Matters</h3><p>Mocking is useful for edge cases, unstable third-party services, and flows that are hard to produce in a real environment. It also helps you validate how the UI responds to backend problems.</p><h3>What To Know</h3><ul><li>Use page.route to intercept requests.</li><li>Use route.fulfill to return mock JSON.</li><li>Use route.abort to simulate failures.</li><li>Use route.continue when you only want to inspect or slightly modify a request.</li></ul><h3>Example: mock a user profile response</h3><pre><code class="language-ts">test(&#39;profile page shows mocked user&#39;, async ({ page }) =&gt; {
+  await page.route(&#39;**/api/profile&#39;, async (route) =&gt; {
+    await route.fulfill({
+      status: 200,
+      contentType: &#39;application/json&#39;,
+      body: JSON.stringify({
+        name: &#39;Aqsa Qadri&#39;,
+        role: &#39;QA Engineer&#39;,
+      }),
+    });
+  });
+
+  await page.goto(&#39;/profile&#39;);
+  await expect(page.getByText(&#39;Aqsa Qadri&#39;)).toBeVisible();
+  await expect(page.getByText(&#39;QA Engineer&#39;)).toBeVisible();
+});</code></pre><h3>Common Mistakes</h3><ul><li>Mocking everything and losing confidence in real integration behavior.</li><li>Using very broad route patterns that accidentally intercept unrelated calls.</li><li>Forgetting to keep the mock shape aligned with the real API contract.</li></ul><h3>Practice Ideas</h3><ul><li>Simulate a 500 error and verify the UI error message.</li><li>Mock an empty-state response and verify the empty-state component.</li></ul><h3>Definition Of Done</h3><ul><li>You can intercept a request and return a custom response.</li><li>You know when a mock is appropriate and when it hides too much reality.</li></ul></section><section class="lesson" id="lesson-03"><h2>3. Authentication Patterns</h2><p>Authentication strategy affects speed, maintainability, and reliability more than almost any other framework decision. Playwright gives you multiple ways to handle auth, and each one fits a different kind of test.</p><h3>Why It Matters</h3><p>If every test logs in through the UI, the suite becomes slow and noisy. If auth is handled well, most tests can start from the correct state immediately.</p><h3>What To Know</h3><ul><li>UI login is best when you are testing the login flow itself.</li><li>API login is often best for test setup.</li><li>Storage state is best for reusable authenticated sessions.</li><li>Role-based users often need different setup files or fixtures.</li></ul><h3>Example: authentication setup test</h3><pre><code class="language-ts">import path from &#39;path&#39;;
+import { test as setup } from &#39;@playwright/test&#39;;
+import { LoginPage } from &#39;../pages/login.page&#39;;
+
+const authFile = path.resolve(__dirname, &#39;../playwright/.auth/student.json&#39;);
+
+setup(&#39;log in and save storage state&#39;, async ({ page }) =&gt; {
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.loginAsStudent();
+  await loginPage.expectLoginSuccess();
+  await page.context().storageState({ path: authFile });
+});</code></pre><h3>Common Mistakes</h3><ul><li>Using one shared account for every parallel test without understanding data collisions.</li><li>Saving stale storage state and forgetting tokens expire.</li><li>Testing login everywhere instead of separating setup from verification.</li></ul><h3>Practice Ideas</h3><ul><li>Create one setup test that saves storage state.</li><li>Create one second test that reuses that saved state.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain UI login, API login, and storageState tradeoffs.</li><li>You can save and reuse an authenticated session.</li></ul></section><section class="lesson" id="lesson-04"><h2>4. Frames, Popups, And Multi-Page Workflows</h2><p>Real applications often include iframes, third-party widgets, and flows that open new tabs or windows. Playwright handles these well, but you need the right object for the right surface.</p><h3>Why It Matters</h3><p>Many tests fail simply because the element is inside a frame or the app opened a new page and the test kept looking in the original one.</p><h3>What To Know</h3><ul><li>Use frameLocator for iframe content.</li><li>Use context.waitForEvent(&quot;page&quot;) or page.waitForEvent(&quot;popup&quot;) for new tabs.</li><li>Keep track of which page object represents which tab.</li><li>Avoid guessing; explicitly wait for the new page or frame interaction point.</li></ul><h3>Example: wait for a popup and assert on the new page</h3><pre><code class="language-ts">test(&#39;help link opens a popup&#39;, async ({ page }) =&gt; {
+  await page.goto(&#39;/dashboard&#39;);
+
+  const popupPromise = page.waitForEvent(&#39;popup&#39;);
+  await page.getByRole(&#39;link&#39;, { name: &#39;Help&#39; }).click();
+  const popup = await popupPromise;
+
+  await popup.waitForLoadState();
+  await expect(popup).toHaveURL(/help/);
+  await expect(popup.getByRole(&#39;heading&#39;, { name: /Help Center/i })).toBeVisible();
+});</code></pre><h3>Common Mistakes</h3><ul><li>Using normal page locators for iframe content.</li><li>Clicking and then trying to guess the popup timing.</li><li>Not naming variables clearly when two or more pages are active.</li></ul><h3>Practice Ideas</h3><ul><li>Automate one iframe interaction with frameLocator.</li><li>Automate one new-tab flow and assert on the popup page.</li></ul><h3>Definition Of Done</h3><ul><li>You know when to use page, context, popup, and frameLocator.</li></ul></section><section class="lesson" id="lesson-05"><h2>5. Advanced Locator Strategy</h2><p>Basic locators are not enough for large or messy applications. Advanced locator work is about keeping selectors readable, resilient, and precise even when the DOM is noisy.</p><h3>Why It Matters</h3><p>Strong locator strategy is one of the biggest differences between stable tests and flaky tests.</p><h3>What To Know</h3><ul><li>Prefer user-facing locators first: role, label, placeholder, text, test ID.</li><li>Use filter, has, and hasText to narrow locators semantically.</li><li>Use first, last, and nth only when the order is truly part of the UI meaning.</li><li>Read strict mode errors as a design signal, not an annoyance.</li></ul><h3>Example: narrow a card locator by contained text</h3><pre><code class="language-ts">const planCard = page.locator(&#39;[data-testid=&quot;plan-card&quot;]&#39;).filter({
+  has: page.getByRole(&#39;heading&#39;, { name: &#39;Enterprise&#39; }),
+});
+
+await planCard.getByRole(&#39;button&#39;, { name: &#39;Choose plan&#39; }).click();</code></pre><h3>Common Mistakes</h3><ul><li>Falling back to CSS too early just because it looks shorter.</li><li>Using nth as a shortcut when the UI has meaningful labels available.</li><li>Ignoring strict mode instead of improving selector precision.</li></ul><h3>Practice Ideas</h3><ul><li>Take three existing selectors and rewrite them to be more semantic.</li><li>Create one locator that uses filter({ hasText }) and one that uses filter({ has }).</li></ul><h3>Definition Of Done</h3><ul><li>You can describe a locator in terms of user meaning, not just DOM shape.</li></ul></section><section class="lesson" id="lesson-06"><h2>6. Test Data Strategy</h2><p>A strong test framework treats data as a first-class design concern. Test data should be deliberate, reusable, and safe for parallel runs.</p><h3>Why It Matters</h3><p>Many flaky tests are really data problems: reused accounts, mutated records, shared names, or hidden dependencies on records that were created manually.</p><h3>What To Know</h3><ul><li>Separate static data from generated data.</li><li>Use unique data when tests create records in parallel.</li><li>Keep environment-specific data out of test files.</li><li>Prefer factories or builders over random inline strings everywhere.</li></ul><h3>Example: use a small factory for unique names</h3><pre><code class="language-ts">export function buildUser(overrides = {}) {
+  const unique = Date.now();
+  return {
+    firstName: &#39;Aqsa&#39;,
+    lastName: &#39;Qadri&#39;,
+    email: `aqsa.${unique}@example.com`,
+    ...overrides,
+  };
+}</code></pre><h3>Common Mistakes</h3><ul><li>Hardcoding the same email or username across many write tests.</li><li>Mixing environment config with scenario data.</li><li>Making tests depend on manually created records.</li></ul><h3>Practice Ideas</h3><ul><li>Create a simple builder for one entity in your project.</li><li>Mark which of your current tests use static data versus dynamic data.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain when test data should be static, dynamic, or seeded.</li></ul></section><section class="lesson" id="lesson-07"><h2>7. Scalable Fixture Design</h2><p>Fixtures should reduce setup noise, not create mystery. As a framework grows, fixture design becomes one of the main determinants of readability.</p><h3>Why It Matters</h3><p>A good fixture layer makes tests short and expressive. A bad fixture layer hides too much, becomes tangled, and is hard to debug.</p><h3>What To Know</h3><ul><li>Create fixtures for shared resources and repeated setup, not for every helper function.</li><li>Split fixture files by responsibility when the project grows.</li><li>Keep one central export for tests, even if internal fixture files are split.</li><li>Default to test-scoped fixtures unless you have a strong reason to widen scope.</li></ul><h3>Example: split fixtures internally but expose one entry point</h3><pre><code class="language-ts">import { test as base, expect } from &#39;@playwright/test&#39;;
+import { pageFixtures, type PageFixtures } from &#39;./page-fixtures&#39;;
+import { authFixtures, type AuthFixtures } from &#39;./auth-fixtures&#39;;
+
+type FrameworkFixtures = PageFixtures &amp; AuthFixtures;
+
+export const test = base.extend&lt;FrameworkFixtures&gt;({
+  ...pageFixtures,
+  ...authFixtures,
+});
+
+export { expect };</code></pre><h3>Common Mistakes</h3><ul><li>Hiding too much business logic inside fixtures.</li><li>Creating giant fixture files with dozens of unrelated concerns.</li><li>Using worker-scoped fixtures before you fully understand the tradeoffs.</li></ul><h3>Practice Ideas</h3><ul><li>Review one fixture and ask whether it really belongs there or should live in a page object or utility.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain why a fixture exists and what problem it removes from the test body.</li></ul></section>
+    <p class="footer">Generated for the Playwright UI Framework learning series.</p>
+  </main>
+</body>
+</html>

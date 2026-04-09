@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright Mastery Series Volume 5</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-decoration: none; }
+    .lead { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0 22px;
+    }
+    .toc {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 28px;
+    }
+    .lesson { break-inside: avoid-page; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.95em; }
+    .footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .toc, .note, .lesson { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright Mastery Series Volume 5</h1>
+    <p class="lead">Operations and maturity: runners, governance, Docker, secrets, metrics, MCP strategy, and how to present your framework work publicly.</p>
+    <div class="note">This final volume is about operating a test framework as a real engineering asset, not just a local codebase.</div>
+    <div class="toc">
+      <h3>Table Of Contents</h3>
+      <ol><li><a href="#lesson-29">29. Self-Hosted Versus GitHub-Hosted Runners</a></li><li><a href="#lesson-30">30. Suite Governance</a></li><li><a href="#lesson-31">31. Dockerized Playwright Setup</a></li><li><a href="#lesson-32">32. Secrets Management</a></li><li><a href="#lesson-33">33. Test Metrics And Trend Tracking</a></li><li><a href="#lesson-34">34. Playwright MCP Usage Strategy</a></li><li><a href="#lesson-35">35. Writing An Article Or Case Study About Your Framework</a></li></ol>
+    </div>
+    <section class="lesson" id="lesson-29"><h2>29. Self-Hosted Versus GitHub-Hosted Runners</h2><p>GitHub-hosted runners are convenient and fast to start with. Self-hosted runners give more control, and they become more attractive as suite size, environment complexity, or cost pressure grows.</p><h3>Why It Matters</h3><p>Runner strategy affects runtime, cost, stability, security, and access to private internal systems.</p><h3>What To Know</h3><ul><li>GitHub-hosted runners are excellent for getting started.</li><li>Self-hosted runners are common for large or internal enterprise suites.</li><li>The decision is operational, not just technical.</li></ul><h3>Decision lens</h3><pre><code class="language-text">GitHub-hosted:
+- low setup
+- easy maintenance
+- good for public and early-stage repos
+
+Self-hosted:
+- more control
+- access to private networks
+- better fit for large-scale internal suites</code></pre><h3>Common Mistakes</h3><ul><li>Assuming self-hosted is automatically better because it sounds more advanced.</li><li>Ignoring cost and queue-time pain on hosted runners once the suite gets large.</li></ul><h3>Practice Ideas</h3><ul><li>Write a short comparison for your current project and one imagined enterprise version of it.</li></ul><h3>Definition Of Done</h3><ul><li>You know the operational tradeoffs, not just the feature list.</li></ul></section><section class="lesson" id="lesson-30"><h2>30. Suite Governance</h2><p>Governance means who owns tests, how failures are triaged, how flaky tests are handled, and how the suite stays healthy over time.</p><h3>Why It Matters</h3><p>Many automation suites fail socially rather than technically. No ownership means no maintenance.</p><h3>What To Know</h3><ul><li>Assign ownership by domain or feature area.</li><li>Define what happens when a test becomes flaky.</li><li>Keep failure triage visible and repeatable.</li><li>Set standards for when tests can be skipped or quarantined.</li></ul><h3>Governance questions every team should answer</h3><pre><code class="language-text">Who owns checkout tests?
+When can a test be quarantined?
+Who reviews flaky failures?
+What is the SLA for fixing a broken critical test?</code></pre><h3>Common Mistakes</h3><ul><li>Treating the suite as nobody’s responsibility.</li><li>Letting quarantined tests accumulate forever.</li></ul><h3>Practice Ideas</h3><ul><li>Create a simple ownership model even if you are the only contributor today.</li></ul><h3>Definition Of Done</h3><ul><li>You can describe how the suite will stay healthy as it grows.</li></ul></section><section class="lesson" id="lesson-31"><h2>31. Dockerized Playwright Setup</h2><p>Docker can make local and CI environments more consistent by packaging the runtime, dependencies, and browser support together.</p><h3>Why It Matters</h3><p>If the suite behaves differently across machines, containers can reduce environment drift.</p><h3>What To Know</h3><ul><li>Use Docker when consistency matters more than local simplicity.</li><li>Package Node, dependencies, and browser-compatible system libraries together.</li><li>Keep the container setup understandable and documented.</li></ul><h3>Dockerfile idea</h3><pre><code class="language-ts">FROM mcr.microsoft.com/playwright:v1.58.0-jammy
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD [&quot;npx&quot;, &quot;playwright&quot;, &quot;test&quot;]</code></pre><h3>Common Mistakes</h3><ul><li>Adding Docker before the team actually needs it.</li><li>Treating containers as magic while still leaving env and secrets unclear.</li></ul><h3>Practice Ideas</h3><ul><li>Containerize one Playwright project and compare the experience to your local machine.</li></ul><h3>Definition Of Done</h3><ul><li>You understand why and when Docker reduces environment problems.</li></ul></section><section class="lesson" id="lesson-32"><h2>32. Secrets Management</h2><p>Secrets are credentials, tokens, keys, and sensitive environment values. Mature frameworks treat them carefully from the beginning.</p><h3>Why It Matters</h3><p>Poor secrets handling creates security risk and operational confusion very quickly.</p><h3>What To Know</h3><ul><li>Keep real secrets out of source control.</li><li>Use CI secret stores for protected values.</li><li>Use example env files for documentation without exposing real credentials.</li></ul><h3>Safe pattern</h3><pre><code class="language-text">.env.example
+.env.qa.example
+
+CI secrets:
+LOGIN_USER
+LOGIN_PASSWORD
+API_TOKEN</code></pre><h3>Common Mistakes</h3><ul><li>Committing a real .env file because it is convenient.</li><li>Logging sensitive values in CI output.</li></ul><h3>Practice Ideas</h3><ul><li>Audit your repo and identify which values are safe examples versus real secrets.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain where each sensitive value should live locally and in CI.</li></ul></section><section class="lesson" id="lesson-33"><h2>33. Test Metrics And Trend Tracking</h2><p>As suites grow, a pass or fail summary is not enough. Metrics help you understand runtime, flakiness, failure clusters, and whether the framework is improving or degrading.</p><h3>Why It Matters</h3><p>You cannot manage what you do not measure. Metrics turn anecdotal pain into visible patterns.</p><h3>What To Know</h3><ul><li>Track runtime, pass rate, retry count, flaky failure frequency, and ownership hot spots.</li><li>Use metrics to drive cleanup work, not to punish teams.</li><li>Watch trends, not only one-off numbers.</li></ul><h3>Useful metrics</h3><pre><code class="language-text">- average suite runtime
+- average PR smoke runtime
+- retry count per week
+- top failing tests
+- top failing domains
+- percentage of quarantined tests</code></pre><h3>Common Mistakes</h3><ul><li>Collecting metrics nobody uses.</li><li>Focusing on vanity numbers instead of decision-making metrics.</li></ul><h3>Practice Ideas</h3><ul><li>Pick three metrics that would actually help you improve your current framework.</li></ul><h3>Definition Of Done</h3><ul><li>You know which measurements would tell you whether the suite is getting healthier.</li></ul></section><section class="lesson" id="lesson-34"><h2>34. Playwright MCP Usage Strategy</h2><p>If you plan to use Playwright MCP or agent-assisted browser workflows, the important lesson is to treat it as an accelerator, not as a replacement for framework design.</p><h3>Why It Matters</h3><p>Tooling can help discovery and exploration, but maintainable test assets still need clear structure, naming, and ownership.</p><h3>What To Know</h3><ul><li>Use MCP and agent tools for exploration, debugging, and rapid investigation.</li><li>Translate useful discoveries into stable page objects and tests.</li><li>Do not let one-off exploratory output replace framework conventions.</li></ul><h3>Good use of MCP in a framework workflow</h3><pre><code class="language-text">1. Explore a page quickly with MCP
+2. Identify strong locators and stable flows
+3. Convert those findings into page object methods
+4. Commit clean framework code, not temporary exploratory steps</code></pre><h3>Common Mistakes</h3><ul><li>Relying on ad hoc generated steps without turning them into maintainable abstractions.</li><li>Skipping review of locator quality because a tool found something that works once.</li></ul><h3>Practice Ideas</h3><ul><li>Use exploratory tooling to map a page, then rewrite the result as a clean page object manually.</li></ul><h3>Definition Of Done</h3><ul><li>You use tooling to accelerate understanding while still protecting framework quality.</li></ul></section><section class="lesson" id="lesson-35"><h2>35. Writing An Article Or Case Study About Your Framework</h2><p>Documenting what you built is a force multiplier. It clarifies your own thinking, helps others learn, and turns a personal project into something portfolio-worthy.</p><h3>Why It Matters</h3><p>A good technical write-up shows not only that you can code, but that you can explain tradeoffs, architecture, and lessons learned.</p><h3>What To Know</h3><ul><li>Tell the story of the problem, not just the final folder tree.</li><li>Explain why certain framework choices were made.</li><li>Include failures, fixes, and tradeoffs because they teach the most.</li><li>Use diagrams or folder trees when they improve clarity.</li></ul><h3>Strong article outline</h3><pre><code class="language-text">1. Why I built the framework
+2. The stack I chose and why
+3. The project structure
+4. Auth, fixtures, and environment handling
+5. Reporting and CI
+6. Scaling lessons and what I would improve next</code></pre><h3>Common Mistakes</h3><ul><li>Writing a changelog instead of a story.</li><li>Listing tools without explaining decisions.</li></ul><h3>Practice Ideas</h3><ul><li>Draft the article outline before the framework feels “finished.”</li></ul><h3>Definition Of Done</h3><ul><li>You can explain your framework to both a beginner and an experienced engineer.</li></ul></section>
+    <p class="footer">Generated for the Playwright UI Framework learning series.</p>
+  </main>
+</body>
+</html>

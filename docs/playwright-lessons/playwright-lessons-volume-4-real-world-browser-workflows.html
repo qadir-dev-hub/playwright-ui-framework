@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright Mastery Series Volume 4</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-decoration: none; }
+    .lead { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0 22px;
+    }
+    .toc {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 28px;
+    }
+    .lesson { break-inside: avoid-page; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.95em; }
+    .footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .toc, .note, .lesson { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright Mastery Series Volume 4</h1>
+    <p class="lead">Real-world browser workflows: mobile, files, permissions, performance-aware testing, utilities, page object quality, and hybrid architecture.</p>
+    <div class="note">This volume covers browser behaviors and framework design choices that show up quickly in real product work.</div>
+    <div class="toc">
+      <h3>Table Of Contents</h3>
+      <ol><li><a href="#lesson-22">22. Mobile And Responsive Testing</a></li><li><a href="#lesson-23">23. Download And Upload Workflows</a></li><li><a href="#lesson-24">24. Browser Permissions And Geolocation</a></li><li><a href="#lesson-25">25. Performance-Aware Testing</a></li><li><a href="#lesson-26">26. Reusable Test Utilities</a></li><li><a href="#lesson-27">27. Page Object Design Quality</a></li><li><a href="#lesson-28">28. Hybrid API/UI Architecture</a></li></ol>
+    </div>
+    <section class="lesson" id="lesson-22"><h2>22. Mobile And Responsive Testing</h2><p>Responsive behavior is not only about screen size. It affects navigation patterns, touch interactions, visible elements, and sometimes whole user journeys.</p><h3>Why It Matters</h3><p>A desktop-only suite can miss broken menus, hidden controls, or touch-specific issues.</p><h3>What To Know</h3><ul><li>Use Playwright device descriptors for common mobile profiles.</li><li>Assert on the mobile-specific UI, not just the same desktop assumptions in a smaller viewport.</li><li>Keep mobile coverage focused on flows that matter most.</li></ul><h3>Example: run with a mobile project</h3><pre><code class="language-ts">projects: [
+  {
+    name: &#39;Mobile Chrome&#39;,
+    use: { ...devices[&#39;Pixel 5&#39;] },
+  },
+]</code></pre><h3>Common Mistakes</h3><ul><li>Calling viewport resizing mobile coverage without checking mobile UI behavior.</li><li>Ignoring hamburger navigation, touch targets, or different copy paths.</li></ul><h3>Practice Ideas</h3><ul><li>Take one desktop test and adapt it for the mobile menu flow.</li></ul><h3>Definition Of Done</h3><ul><li>You know which flows need responsive coverage in your product.</li></ul></section><section class="lesson" id="lesson-23"><h2>23. Download And Upload Workflows</h2><p>Files are common in real applications: upload evidence, import CSVs, download reports, export invoices. Playwright has built-in support for both directions.</p><h3>Why It Matters</h3><p>File workflows often feel tricky in browser automation, but Playwright makes them much more approachable than older tools.</p><h3>What To Know</h3><ul><li>Use setInputFiles for upload fields.</li><li>Use page.waitForEvent(&quot;download&quot;) for downloads.</li><li>Assert on file names, file presence, or downstream UI effects.</li></ul><h3>Example: handle a download</h3><pre><code class="language-ts">const downloadPromise = page.waitForEvent(&#39;download&#39;);
+await page.getByRole(&#39;button&#39;, { name: &#39;Export CSV&#39; }).click();
+const download = await downloadPromise;
+
+expect(await download.suggestedFilename()).toContain(&#39;.csv&#39;);</code></pre><h3>Common Mistakes</h3><ul><li>Trying to automate OS file pickers directly when a file input exists.</li><li>Not waiting for the download event before clicking.</li></ul><h3>Practice Ideas</h3><ul><li>Create one upload test and one download assertion in a safe demo app.</li></ul><h3>Definition Of Done</h3><ul><li>You can automate both an upload and a download flow confidently.</li></ul></section><section class="lesson" id="lesson-24"><h2>24. Browser Permissions And Geolocation</h2><p>Modern apps ask for location, notifications, camera, microphone, clipboard, and other permissions. Browser automation needs to model those states explicitly.</p><h3>Why It Matters</h3><p>If you do not control permissions, tests can fail due to prompts, blocked features, or inconsistent local settings.</p><h3>What To Know</h3><ul><li>Use context options to grant permissions.</li><li>Set geolocation when location-aware behavior matters.</li><li>Treat permissions as part of the scenario setup, not an afterthought.</li></ul><h3>Example: create a context with location</h3><pre><code class="language-ts">const context = await browser.newContext({
+  geolocation: { latitude: 43.6532, longitude: -79.3832 },
+  permissions: [&#39;geolocation&#39;],
+});
+
+const page = await context.newPage();
+await page.goto(&#39;/store-locator&#39;);</code></pre><h3>Common Mistakes</h3><ul><li>Expecting the browser to remember local permission choices in CI.</li><li>Testing location-based features without controlling the coordinates.</li></ul><h3>Practice Ideas</h3><ul><li>Simulate two locations and verify the UI changes appropriately.</li></ul><h3>Definition Of Done</h3><ul><li>You can grant a permission and explain why the test needs it.</li></ul></section><section class="lesson" id="lesson-25"><h2>25. Performance-Aware Testing</h2><p>Playwright is not a full performance testing tool, but it can still help you watch for obviously slow or broken user-critical flows.</p><h3>Why It Matters</h3><p>Users experience performance through UI behavior. Some automation checks can protect against severe regressions even if they are not full load tests.</p><h3>What To Know</h3><ul><li>Track obvious flow timings for critical user journeys.</li><li>Use performance checks as guardrails, not exact benchmark truth.</li><li>Focus on what the user notices: time to render, time to complete key actions, long blocking spinners.</li></ul><h3>Example: simple timing guardrail</h3><pre><code class="language-ts">const start = Date.now();
+await page.goto(&#39;/dashboard&#39;);
+await expect(page.getByRole(&#39;heading&#39;, { name: &#39;Dashboard&#39; })).toBeVisible();
+const elapsed = Date.now() - start;
+
+expect(elapsed).toBeLessThan(5000);</code></pre><h3>Common Mistakes</h3><ul><li>Treating Playwright timing as a substitute for dedicated performance tooling.</li><li>Using strict timing thresholds in unstable environments.</li></ul><h3>Practice Ideas</h3><ul><li>Add one soft timing guardrail to a critical page load.</li></ul><h3>Definition Of Done</h3><ul><li>You know the difference between performance-aware UI checks and real performance testing.</li></ul></section><section class="lesson" id="lesson-26"><h2>26. Reusable Test Utilities</h2><p>Utilities should make common tasks clearer, not hide the framework under layers of wrappers. Good utilities solve repeated problems that are not page-specific.</p><h3>Why It Matters</h3><p>A messy utils folder becomes a maintenance trap. A focused one saves time and keeps tests readable.</p><h3>What To Know</h3><ul><li>Utilities are good for generators, parsing, formatting, and cross-cutting helpers.</li><li>Page-specific behavior should stay in page objects.</li><li>Generic wrappers around click, fill, and wait are usually unnecessary in Playwright.</li></ul><h3>Example: a small data utility</h3><pre><code class="language-ts">export function uniqueEmail(prefix = &#39;user&#39;) {
+  return `${prefix}.${Date.now()}@example.com`;
+}</code></pre><h3>Common Mistakes</h3><ul><li>Creating clickElement or typeText wrappers for everything.</li><li>Letting utilities become the place where any code lands when nobody knows where it belongs.</li></ul><h3>Practice Ideas</h3><ul><li>Review your utilities and move anything page-specific into a page object.</li></ul><h3>Definition Of Done</h3><ul><li>Every utility in your repo solves a real repeated problem.</li></ul></section><section class="lesson" id="lesson-27"><h2>27. Page Object Design Quality</h2><p>Page objects should express user intent and centralize page behavior. They should not become giant god classes or thin wrappers around every Playwright method.</p><h3>Why It Matters</h3><p>Page objects can improve readability dramatically, but poor page object design creates indirection without value.</p><h3>What To Know</h3><ul><li>Expose meaningful page actions and assertions.</li><li>Keep selectors and page-specific logic close together.</li><li>Avoid giant base pages with generic wrappers unless you have a proven need.</li></ul><h3>Good page object shape</h3><pre><code class="language-ts">class CheckoutPage {
+  async applyCoupon(code: string) { ... }
+  async placeOrder() { ... }
+  async expectOrderSummary(total: string) { ... }
+}</code></pre><h3>Common Mistakes</h3><ul><li>Adding methods like clickBlueButtonTopRight because they mirror the DOM instead of the business action.</li><li>Creating enormous page objects that cover several screens or dialogs at once.</li></ul><h3>Practice Ideas</h3><ul><li>Review one page object and ask whether each method expresses business intent or raw mechanics.</li></ul><h3>Definition Of Done</h3><ul><li>Your page object methods read like actions a user or business workflow would understand.</li></ul></section><section class="lesson" id="lesson-28"><h2>28. Hybrid API/UI Architecture</h2><p>A hybrid framework treats API and UI as complementary tools. It does not force everything through one layer.</p><h3>Why It Matters</h3><p>This is often the sweet spot for real-world quality: API for setup and cleanup, UI for user-visible verification.</p><h3>What To Know</h3><ul><li>Decide which layer gives the fastest, clearest signal for each scenario.</li><li>Let API fixtures or helpers prepare state when UI setup is wasteful.</li><li>Keep the test story understandable even when it uses both layers.</li></ul><h3>Hybrid test story</h3><pre><code class="language-text">1. Create account via API
+2. Log in through storageState
+3. Open billing page in UI
+4. Assert invoice badge is visible
+5. Delete test invoice via API</code></pre><h3>Common Mistakes</h3><ul><li>Hiding so much setup in API code that the test story becomes hard to follow.</li><li>Forcing everything through UI because it feels more realistic, even when it wastes runtime.</li></ul><h3>Practice Ideas</h3><ul><li>Rewrite one existing test into a cleaner hybrid version.</li></ul><h3>Definition Of Done</h3><ul><li>You can justify which steps belong in API and which belong in UI.</li></ul></section>
+    <p class="footer">Generated for the Playwright UI Framework learning series.</p>
+  </main>
+</body>
+</html>

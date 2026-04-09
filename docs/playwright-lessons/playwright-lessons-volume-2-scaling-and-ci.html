@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright Mastery Series Volume 2</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+    .page {
+      max-width: 960px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-decoration: none; }
+    .lead { color: var(--muted); font-size: 17px; margin-bottom: 18px; }
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0 22px;
+    }
+    .toc {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 28px;
+    }
+    .lesson { break-inside: avoid-page; }
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+    code { font-family: Consolas, "Courier New", monospace; font-size: 0.95em; }
+    .footer { margin-top: 28px; color: var(--muted); font-size: 13px; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .toc, .note, .lesson { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright Mastery Series Volume 2</h1>
+    <p class="lead">Scaling and CI: sharding, debugging, enterprise architecture, roles, environments, conventions, and flaky tests.</p>
+    <div class="note">This volume is about moving from a project that works locally to a framework that keeps working under team pressure and CI load.</div>
+    <div class="toc">
+      <h3>Table Of Contents</h3>
+      <ol><li><a href="#lesson-08">8. Large-Suite Execution And Sharding</a></li><li><a href="#lesson-09">9. CI Debugging And Artifact Analysis</a></li><li><a href="#lesson-10">10. Enterprise Framework Architecture</a></li><li><a href="#lesson-11">11. Role-Based Testing</a></li><li><a href="#lesson-12">12. Environment Management At Scale</a></li><li><a href="#lesson-13">13. Project Structure And Conventions</a></li><li><a href="#lesson-14">14. Flaky Test Diagnosis</a></li></ol>
+    </div>
+    <section class="lesson" id="lesson-08"><h2>8. Large-Suite Execution And Sharding</h2><p>When a suite gets large, one machine is not enough. Sharding splits the test run across multiple jobs or machines so the total wall-clock time stays reasonable.</p><h3>Why It Matters</h3><p>Without sharding, large UI suites become too slow to be useful. Teams stop trusting them or stop running them frequently.</p><h3>What To Know</h3><ul><li>Playwright supports --shard=x/y to split the run into deterministic slices.</li><li>GitHub Actions matrix jobs pair naturally with Playwright sharding.</li><li>Report merging becomes important as soon as you shard.</li></ul><h3>Example: run shard 3 of 10</h3><pre><code class="language-text">npx playwright test --shard=3/10</code></pre><h3>Common Mistakes</h3><ul><li>Running thousands of UI tests in one CI job and calling that scalable.</li><li>Ignoring artifact and report merging until debugging becomes painful.</li><li>Using shared test data that breaks when shards run in parallel.</li></ul><h3>Practice Ideas</h3><ul><li>Take a suite of several files and simulate sharding locally with two shards.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain what sharding solves and what it does not solve.</li></ul></section><section class="lesson" id="lesson-09"><h2>9. CI Debugging And Artifact Analysis</h2><p>A good automation engineer can explain why a test failed in CI, not just rerun it locally and hope. Playwright gives you rich artifacts; the skill is learning how to read them efficiently.</p><h3>Why It Matters</h3><p>Most expensive automation time is spent in failure analysis, not in writing straightforward happy-path scripts.</p><h3>What To Know</h3><ul><li>Start with the terminal error and failing line.</li><li>Open the HTML report next.</li><li>Use traces when the failure path is unclear.</li><li>Compare local and CI environment differences: viewport, headless mode, timing, data, and permissions.</li></ul><h3>Debug workflow for a CI-only failure</h3><pre><code class="language-text">1. Read the failing locator or assertion in the job log
+2. Download the playwright-report artifact
+3. Open the trace.zip from test-results
+4. Compare CI URL, env, and storage state with local run
+5. Reproduce locally with --headed or --debug if needed</code></pre><h3>Common Mistakes</h3><ul><li>Jumping straight to waitForTimeout without understanding the failure.</li><li>Ignoring the screenshot, trace, or video attachments that already tell the story.</li></ul><h3>Practice Ideas</h3><ul><li>Take one failing test and write a short root-cause summary using only report artifacts.</li></ul><h3>Definition Of Done</h3><ul><li>You have a repeatable investigation order for CI failures.</li></ul></section><section class="lesson" id="lesson-10"><h2>10. Enterprise Framework Architecture</h2><p>Enterprise-scale architecture is less about fancy abstractions and more about operational clarity: who owns what, how tests are organized, how suites run, and how the framework evolves safely.</p><h3>Why It Matters</h3><p>A framework can have excellent code and still fail the team if its structure does not support growth, ownership, and debugging.</p><h3>What To Know</h3><ul><li>Organize by business domain or product area, not by random technical layers alone.</li><li>Keep a clean public surface for tests and helpers.</li><li>Separate framework internals from domain-specific test code.</li><li>Bias toward conventions that reduce decision fatigue for contributors.</li></ul><h3>Example: a scalable high-level structure</h3><pre><code class="language-ts">tests/
+  checkout/
+  orders/
+  users/
+pages/
+fixtures/
+data-builders/
+config/
+utils/
+docs/
+.github/workflows/</code></pre><h3>Common Mistakes</h3><ul><li>Creating deep inheritance trees because older Selenium frameworks did that.</li><li>Letting utilities become a dump folder.</li><li>Mixing business data, framework config, and environment secrets in one place.</li></ul><h3>Practice Ideas</h3><ul><li>Sketch what your current repo structure would look like if the suite had 500 tests instead of 5.</li></ul><h3>Definition Of Done</h3><ul><li>You can explain where a new page object, fixture, test data file, and CI helper should live.</li></ul></section><section class="lesson" id="lesson-11"><h2>11. Role-Based Testing</h2><p>Many apps behave differently for admins, managers, analysts, and standard users. A real framework needs a clean way to model these roles without duplicating everything.</p><h3>Why It Matters</h3><p>Role-based access is often a business-critical behavior. If the framework cannot express roles well, tests become repetitive and confusing.</p><h3>What To Know</h3><ul><li>Use distinct users and often distinct storageState files per role.</li><li>Name fixtures clearly: adminPage, managerSession, standardUserState.</li><li>Keep role choice visible in the test scenario when it matters.</li></ul><h3>Example: role-specific storage state files</h3><pre><code class="language-ts">test.describe(&#39;admin features&#39;, () =&gt; {
+  test.use({ storageState: &#39;playwright/.auth/admin.json&#39; });
+
+  test(&#39;admin can delete a user&#39;, async ({ page }) =&gt; {
+    await page.goto(&#39;/admin/users&#39;);
+    await page.getByRole(&#39;button&#39;, { name: &#39;Delete user&#39; }).click();
+  });
+});</code></pre><h3>Common Mistakes</h3><ul><li>Using one privileged account for every test because it is convenient.</li><li>Hiding the role choice so deeply that tests no longer explain who is acting.</li></ul><h3>Practice Ideas</h3><ul><li>Design fixtures for two roles in one feature area and compare how readable the tests become.</li></ul><h3>Definition Of Done</h3><ul><li>You can express the acting user role clearly in a test.</li></ul></section><section class="lesson" id="lesson-12"><h2>12. Environment Management At Scale</h2><p>One environment file is fine at the beginning. At scale, environment handling becomes a discipline around naming, safety, secrets, and visibility.</p><h3>Why It Matters</h3><p>Teams lose time when nobody is sure which env a suite is targeting, what config was loaded, or whether the runner even had the correct secrets.</p><h3>What To Know</h3><ul><li>Choose env files predictably, such as .env.qa, .env.staging, and .env.prod.</li><li>Print the selected environment and base URL at run start.</li><li>Fail early if the env file is missing or required values are empty.</li><li>Keep secrets out of source control for real environments.</li></ul><h3>Example: visible env loading</h3><pre><code class="language-ts">const testEnv = process.env.ENV ?? &#39;qa&#39;;
+const envFile = path.resolve(__dirname, &#39;environments&#39;, `.env.${testEnv}`);
+
+if (!fs.existsSync(envFile)) {
+  throw new Error(`Environment file not found: ${envFile}`);
+}
+
+dotenv.config({ path: envFile });
+console.log(`Using env file: ${envFile}`);
+console.log(`Base URL: ${process.env.BASE_URL}`);</code></pre><h3>Common Mistakes</h3><ul><li>Silently defaulting to the wrong environment.</li><li>Committing real secrets in example env files.</li><li>Reading environment values before dotenv loads them.</li></ul><h3>Practice Ideas</h3><ul><li>Make one config value mandatory and fail fast when it is missing.</li></ul><h3>Definition Of Done</h3><ul><li>You can always tell which env the suite is using before tests start.</li></ul></section><section class="lesson" id="lesson-13"><h2>13. Project Structure And Conventions</h2><p>Conventions are underrated. A framework scales when contributors make similar decisions by default, not when every file invents its own style.</p><h3>Why It Matters</h3><p>Clear conventions reduce review overhead, onboarding time, and maintenance cost.</p><h3>What To Know</h3><ul><li>Pick naming patterns and stick to them: login.page.ts, login.spec.ts, test-fixtures.ts.</li><li>Keep test names behavior-focused and readable.</li><li>Use code comments sparingly and only where they help with intent.</li><li>Prefer one obvious import path for common framework surfaces.</li></ul><h3>Example naming patterns</h3><pre><code class="language-ts">pages/
+  login.page.ts
+  checkout.page.ts
+
+tests/
+  login.spec.ts
+  checkout.spec.ts
+
+fixtures/
+  test-fixtures.ts</code></pre><h3>Common Mistakes</h3><ul><li>Mixing singular and plural naming randomly.</li><li>Letting page objects become utility classes and vice versa.</li></ul><h3>Practice Ideas</h3><ul><li>Write down three conventions for your repo and enforce them in new files.</li></ul><h3>Definition Of Done</h3><ul><li>A new contributor can guess where a file should live before asking.</li></ul></section><section class="lesson" id="lesson-14"><h2>14. Flaky Test Diagnosis</h2><p>Flaky tests are tests that sometimes pass and sometimes fail without a real product change. The goal is not just to rerun them until green; the goal is to find the instability source.</p><h3>Why It Matters</h3><p>Flakiness erodes trust faster than almost anything else in test automation.</p><h3>What To Know</h3><ul><li>Separate product race conditions from automation timing issues.</li><li>Check whether the test relies on unstable data, order, or environment assumptions.</li><li>Replace generic waits with state-based assertions.</li><li>Use traces to find the first divergence point.</li></ul><h3>Replace a sleep with a state assertion</h3><pre><code class="language-ts">// fragile
+await page.waitForTimeout(5000);
+
+// better
+await expect(page.getByText(&#39;Order submitted&#39;)).toBeVisible();</code></pre><h3>Common Mistakes</h3><ul><li>Masking flakiness by increasing timeouts everywhere.</li><li>Ignoring data collisions caused by parallel runs.</li><li>Calling a test flaky when the app itself is racing.</li></ul><h3>Practice Ideas</h3><ul><li>Take one test that uses waitForTimeout and replace it with a state-based wait.</li></ul><h3>Definition Of Done</h3><ul><li>You can describe a flaky failure in terms of root cause, not just symptom.</li></ul></section>
+    <p class="footer">Generated for the Playwright UI Framework learning series.</p>
+  </main>
+</body>
+</html>
