@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Environment Note</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 32px;
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.55;
+      color: #1f2937;
+      background: #ffffff;
+      white-space: pre-wrap;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">The cleanest way is to make the environment explicit before the test starts and print it out.
+
+There are a few good ways to do that.
+
+Option 1: print the environment from playwright.config.ts
+This is the simplest and most useful approach.
+
+If you already choose the env like this:
+
+const testEnv = process.env.ENV ?? 'qa';
+then add a log right after it:
+
+console.log(`Running tests against environment: ${testEnv}`);
+and maybe also:
+
+console.log(`Loading env file: environments/.env.${testEnv}`);
+console.log(`Base URL: ${process.env.BASE_URL}`);
+But important:
+if you print BASE_URL, make sure it happens after dotenv.config(...).
+
+Example:
+
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+const testEnv = process.env.ENV ?? 'qa';
+const envFile = path.resolve(__dirname, 'environments', `.env.${testEnv}`);
+
+dotenv.config({ path: envFile });
+
+console.log(`Running tests against environment: ${testEnv}`);
+console.log(`Using env file: ${envFile}`);
+console.log(`Base URL: ${process.env.BASE_URL}`);
+
+export default defineConfig({
+  ...
+});
+What this gives you
+Before Playwright runs tests, the terminal will show:
+
+which environment was selected
+which env file was loaded
+what base URL was picked
+That is usually the best beginner-friendly solution.
+
+Option 2: create an npm script per environment
+This is very practical too.
+
+In package.json, you can add:
+
+"scripts": {
+  "test:qa": "set ENV=qa && playwright test",
+  "test:staging": "set ENV=staging && playwright test",
+  "test:prod": "set ENV=prod && playwright test"
+}
+Since you’re on Windows/PowerShell, another safe approach is just to set it in terminal before running.
+
+Example:
+
+$env:ENV="qa"
+npx playwright test
+or
+
+$env:ENV="staging"
+npx playwright test
+Then your config logs will tell you exactly what got loaded.
+
+Option 3: make Playwright fail if the env file is missing
+This is useful because it prevents silent mistakes.
+
+Example:
+
+import fs from 'fs';
+
+if (!fs.existsSync(envFile)) {
+  throw new Error(`Environment file not found: ${envFile}`);
+}
+That way:
+
+you know exactly what Playwright tried to load
+it fails early if the wrong env is selected
+Option 4: create a tiny helper to display current env
+You could also put this in config/env.ts:
+
+export const env = {
+  environment: process.env.ENV ?? 'qa',
+  baseUrl: process.env.BASE_URL ?? '',
+  loginUser: process.env.LOGIN_USER ?? '',
+  loginPassword: process.env.LOGIN_PASSWORD ?? '',
+};
+
+console.log(`Environment: ${env.environment}`);
+console.log(`Base URL: ${env.baseUrl}`);
+But I usually prefer logging in playwright.config.ts, because that is where the env file is actually chosen.
+
+Best recommendation for you
+Use Option 1.
+
+That means:
+
+log testEnv
+log the env file path
+log BASE_URL
+This gives you immediate visibility every time you run tests.
+
+Example final version
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+const testEnv = process.env.ENV ?? 'qa';
+const envFile = path.resolve(__dirname, 'environments', `.env.${testEnv}`);
+
+dotenv.config({ path: envFile });
+
+console.log(`Running tests against environment: ${testEnv}`);
+console.log(`Using env file: ${envFile}`);
+console.log(`Base URL: ${process.env.BASE_URL}`);
+
+export default defineConfig({
+  testDir: './tests',
+  use: {
+    baseURL: process.env.BASE_URL,
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+});
+What you’ll see
+When you run a test, your terminal will show something like:
+
+Running tests against environment: qa
+Using env file: C:\Studies\Agentic AI\playwright-ui-framework\environments\.env.qa
+Base URL: https://demoqa.com/
+That’s usually enough to confirm the desired environment before the test runs.
+
+If you want, I can show you how to make this even nicer by adding commands like:
+
+npm run test:qa
+npm run test:staging
+npm run test:prod</div>
+</body>
+</html>

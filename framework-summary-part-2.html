@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright Framework Summary Part 2</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --paper: #fffdf9;
+      --ink: #1f2937;
+      --muted: #5f6b76;
+      --accent: #0b5d5b;
+      --accent-soft: #def0ee;
+      --border: #d6d1c4;
+      --code-bg: #17212b;
+      --code-ink: #f4f7fb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ebe3d2 0%, var(--bg) 100%);
+      line-height: 1.55;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 940px;
+      margin: 28px auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 45px rgba(46, 40, 32, 0.08);
+    }
+
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 12px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 22px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+
+    .lead {
+      color: var(--muted);
+      font-size: 17px;
+      margin-bottom: 20px;
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+      background: rgba(11, 93, 91, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin: 14px 0 18px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      background: #fff;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page {
+        margin: 0;
+        border: none;
+        box-shadow: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .note, .card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright Framework Summary Part 2</h1>
+    <p class="lead">
+      Follow-up notes covering everything discussed after the first Playwright learning PDF: framework structure, fixtures, environments, reporting, GitHub setup, CI, and scaling.
+    </p>
+
+    <div class="note">
+      <strong>Main transition:</strong> the conversation moved from “how do I learn Playwright?” into “how do I design a Playwright framework that could grow into a real team project?”
+    </div>
+
+    <h2>1. Framework Structure From Scratch</h2>
+    <p>The framework stage introduced the idea that the project should optimize for maintainability, reuse, and team readability, not just for writing one passing test.</p>
+
+    <pre><code>playwright-ui-framework/
+  tests/
+  pages/
+  fixtures/
+  test-data/
+  utils/
+  config/
+  scripts/
+  playwright.config.ts
+  package.json
+  tsconfig.json
+  .env
+  .gitignore
+  README.md</code></pre>
+
+    <p>Key mental rule:</p>
+    <ul>
+      <li>scenario logic stays in <code>tests/</code></li>
+      <li>page-specific UI behavior stays in <code>pages/</code></li>
+      <li>shared runner setup stays in <code>fixtures/</code></li>
+      <li>config values stay in <code>config/</code> or environment files</li>
+      <li>cross-cutting helpers stay in <code>utils/</code></li>
+    </ul>
+
+    <h2>2. Custom Fixtures And Framework Wiring</h2>
+    <p>Custom fixtures were introduced as the Playwright-native way to inject framework objects into tests.</p>
+
+    <pre><code>import { test as base } from '@playwright/test';
+import { TodoPage } from '../pages/todo-page';
+
+type MyFixtures = {
+  todoPage: TodoPage;
+};
+
+export const test = base.extend&lt;MyFixtures&gt;({
+  todoPage: async ({ page }, use) => {
+    const todoPage = new TodoPage(page);
+    await use(todoPage);
+  },
+});
+
+export { expect } from '@playwright/test';</code></pre>
+
+    <p>This changed tests from:</p>
+    <pre><code>const todoPage = new TodoPage(page);</code></pre>
+
+    <p>to cleaner framework-style tests:</p>
+    <pre><code>test('user can add a todo', async ({ todoPage }) => {
+  await todoPage.goto();
+  await todoPage.addTodo('Learn custom fixtures');
+});</code></pre>
+
+    <h2>3. What Data Seeding Means</h2>
+    <p>Data seeding was defined as creating the data the test needs before the actual UI scenario begins.</p>
+    <ul>
+      <li>a user account the UI test will log in with</li>
+      <li>a product that must already exist</li>
+      <li>a record that must appear in search results</li>
+    </ul>
+
+    <p>A fast pattern is API seeding before the UI assertions:</p>
+    <pre><code>test('user can view seeded todo', async ({ request, page }) => {
+  await request.post('https://example.com/api/todos', {
+    data: { title: 'Learn seeding' }
+  });
+
+  await page.goto('https://example.com/todos');
+  await expect(page.getByText('Learn seeding')).toBeVisible();
+});</code></pre>
+
+    <h2>4. One Main Fixture Entry Point</h2>
+    <p>When the fixture layer grows, internal fixture files can be split by concern, but tests should still ideally import from one central module.</p>
+
+    <pre><code>fixtures/
+  page-fixtures.ts
+  auth-fixtures.ts
+  data-fixtures.ts
+  test-fixtures.ts</code></pre>
+
+    <p>The main entry point combines the pieces:</p>
+    <pre><code>import { test as base, expect } from '@playwright/test';
+import { pageFixtures, type PageFixtures } from './page-fixtures';
+import { authFixtures, type AuthFixtures } from './auth-fixtures';
+
+type MyFixtures = PageFixtures &amp; AuthFixtures;
+
+export const test = base.extend&lt;MyFixtures&gt;({
+  ...pageFixtures,
+  ...authFixtures,
+});
+
+export { expect };</code></pre>
+
+    <p>So tests keep one clean import:</p>
+    <pre><code>import { test, expect } from '../fixtures/test-fixtures';</code></pre>
+
+    <h2>5. Environment Strategy</h2>
+    <p>The framework moved away from hardcoded URLs and credentials toward environment-driven config.</p>
+
+    <pre><code>export const env = {
+  environment: process.env.ENV ?? 'qa',
+  baseUrl: process.env.BASE_URL ?? 'https://qa.example.com',
+  loginUser: process.env.LOGIN_USER ?? '',
+  loginPassword: process.env.LOGIN_PASSWORD ?? '',
+};</code></pre>
+
+    <p>Important distinction:</p>
+    <ul>
+      <li><code>.env.qa</code> is a plain text data file</li>
+      <li><code>config/env.ts</code> is TypeScript that reads from <code>process.env</code></li>
+    </ul>
+
+    <div class="note">
+      <strong>Key chain:</strong><br>
+      <code>.env.qa -&gt; dotenv loads it -&gt; process.env -&gt; config/env.ts reads it</code>
+    </div>
+
+    <h3>Why The CI Bug Happened</h3>
+    <p>A GitHub Actions failure exposed that the env file was being loaded after <code>env.ts</code> had already read <code>process.env</code>. The result was an empty <code>baseURL</code>, which made this fail:</p>
+
+    <pre><code>await page.goto('/automation-practice-form');</code></pre>
+
+    <p>The fix was to load <code>dotenv</code> first and then use <code>process.env.BASE_URL</code> in the Playwright config.</p>
+
+    <pre><code>import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+import path from 'path';
+
+const testEnv = process.env.ENV ?? 'qa';
+dotenv.config({
+  path: path.resolve(__dirname, 'environments', `.env.${testEnv}`),
+});
+
+export default defineConfig({
+  use: {
+    baseURL: process.env.BASE_URL,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+});</code></pre>
+
+    <h2>6. Reporting Strategy</h2>
+    <p>The framework introduced a deliberate artifact strategy rather than relying only on terminal output.</p>
+
+    <pre><code>use: {
+  trace: 'on-first-retry',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+}</code></pre>
+
+    <p>Artifact roles:</p>
+    <ul>
+      <li>HTML report = result dashboard</li>
+      <li>trace = deep replay and debugging</li>
+      <li>screenshot = quick visual failure state</li>
+      <li>video = full playback</li>
+      <li>terminal logs = first failure explanation</li>
+    </ul>
+
+    <p>A key learning moment was understanding why traces were not appearing: <code>trace: 'on-first-retry'</code> only records on a retry, and local config originally had <code>retries: 0</code>.</p>
+
+    <h2>7. Building The Real Framework Repo</h2>
+    <p>The project moved from the learning lab into a clean repo named <code>playwright-ui-framework</code>.</p>
+
+    <p>Major setup steps:</p>
+    <ol>
+      <li><code>npm init -y</code></li>
+      <li><code>npm init playwright@latest</code></li>
+      <li><code>npx playwright test</code></li>
+      <li>install <code>dotenv</code></li>
+      <li>add framework folders</li>
+      <li>add env files and config helper</li>
+      <li>create page object</li>
+      <li>create fixture</li>
+      <li>create first framework test</li>
+      <li>add README</li>
+    </ol>
+
+    <h2>8. Practice Form Page Object</h2>
+    <p>A real page object was built around the DemoQA Practice Form.</p>
+
+    <pre><code>export class PracticeFormPage {
+  constructor(private readonly page: Page) {}
+
+  async goto() {
+    await this.page.goto('/automation-practice-form');
+  }
+
+  async fillStudentRegistrationForm(data: PracticeFormData) {
+    await this.page.getByPlaceholder('First Name').fill(data.firstName);
+    await this.page.getByPlaceholder('Last Name').fill(data.lastName);
+    await this.page.getByPlaceholder('name@example.com').fill(data.email);
+    await this.page.getByPlaceholder('Mobile Number').fill(data.mobile);
+  }
+
+  async submit() {
+    await this.page.locator('#submit').click();
+  }
+}</code></pre>
+
+    <p>A useful locator correction was made here: the submission modal title was a <code>div</code>, not a semantic heading, so this was not reliable:</p>
+
+    <pre><code>this.page.getByRole('heading', { name: 'Thanks for submitting the form' })</code></pre>
+
+    <p>The better locator was:</p>
+
+    <pre><code>this.page.locator('#example-modal-sizes-title-lg')</code></pre>
+
+    <h2>9. First Framework Fixture And Test</h2>
+    <p>The fixture exposed the page object:</p>
+
+    <pre><code>import { test as base, expect } from '@playwright/test';
+import { PracticeFormPage } from '../pages/practice-form.page';
+
+type FrameworkFixtures = {
+  practiceFormPage: PracticeFormPage;
+};
+
+export const test = base.extend&lt;FrameworkFixtures&gt;({
+  practiceFormPage: async ({ page }, use) => {
+    await use(new PracticeFormPage(page));
+  },
+});
+
+export { expect };</code></pre>
+
+    <p>The first test then read like a real framework scenario:</p>
+
+    <pre><code>import path from 'path';
+import { test } from '../fixtures/test-fixtures';
+
+test('user can submit the practice form', async ({ practiceFormPage }) => {
+  await practiceFormPage.goto();
+
+  await practiceFormPage.fillStudentRegistrationForm({
+    firstName: 'Aqsa',
+    lastName: 'Qadri',
+    email: 'aqsa@example.com',
+    gender: 'Female',
+    mobile: '1234567890',
+    subject: 'Maths',
+    hobbies: ['Reading'],
+    picturePath: path.resolve(__dirname, '../package.json'),
+    currentAddress: 'Toronto, Ontario',
+    state: 'NCR',
+    city: 'Delhi',
+  });
+
+  await practiceFormPage.submit();
+  await practiceFormPage.expectSubmissionModal();
+});</code></pre>
+
+    <h2>10. README And GitHub Foundation</h2>
+    <p>A GitHub-friendly README was created to explain:</p>
+    <ul>
+      <li>what the framework is</li>
+      <li>tech stack</li>
+      <li>project structure</li>
+      <li>environment handling</li>
+      <li>test commands</li>
+      <li>reporting behavior</li>
+    </ul>
+
+    <p>This was part of moving from a learning sandbox into a repo with portfolio and team value.</p>
+
+    <h2>11. GitHub Actions And CI</h2>
+    <p>The next stage was CI using GitHub Actions. The basic model discussed was:</p>
+
+    <pre><code>name: Playwright Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test</code></pre>
+
+    <p>Important learning points:</p>
+    <ul>
+      <li>GitHub Actions runs on temporary cloud runners, not on the local machine</li>
+      <li>you can watch workflow logs live in the GitHub Actions tab</li>
+      <li>for public repos, Actions is often effectively free enough for learning use</li>
+      <li>you do not see a live visible browser in GitHub; you inspect artifacts and logs afterward</li>
+    </ul>
+
+    <h2>12. Scalability Discussion</h2>
+    <p>The conversation then moved from “basic CI” to “could this work for 5,000-6,000 tests?”</p>
+
+    <p>Main conclusion:</p>
+    <div class="note">
+      <strong>GitHub Actions + Playwright can scale, but not as one giant simple job.</strong><br>
+      A large suite needs sharding, matrix jobs, report merging, and often stronger runner strategy.
+    </div>
+
+    <p>Scalable patterns discussed:</p>
+    <ul>
+      <li>split smoke vs regression vs nightly runs</li>
+      <li>use Playwright sharding</li>
+      <li>use GitHub Actions matrix jobs</li>
+      <li>merge reports</li>
+      <li>consider larger or self-hosted runners if runtime/cost becomes too high</li>
+    </ul>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Good For GitHub-Hosted</h3>
+        <ul>
+          <li>small to medium suites</li>
+          <li>smoke suites</li>
+          <li>early framework development</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Likely Needed At Enterprise Scale</h3>
+        <ul>
+          <li>sharding and parallel jobs</li>
+          <li>report merging</li>
+          <li>larger runners or self-hosted runners</li>
+          <li>careful suite design</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>13. Roadmap Position</h2>
+    <p>By the end of this part, the learning path had moved into architecture and scaling. The next lesson identified was:</p>
+
+    <pre><code>Enterprise-scale Playwright architecture</code></pre>
+
+    <p>That includes:</p>
+    <ul>
+      <li>test organization by feature</li>
+      <li>suite segmentation</li>
+      <li>scalable fixture strategy</li>
+      <li>test data design at scale</li>
+      <li>runner strategy</li>
+      <li>CI pipeline architecture</li>
+    </ul>
+
+    <h2>14. Practical Commands Collected</h2>
+    <pre><code>npm init -y
+npm init playwright@latest
+npx playwright test
+npx playwright show-report
+npm install -D dotenv
+npm run test
+npm run test:headed
+npm run test:debug
+npm run report</code></pre>
+
+    <h2>15. Main Takeaways</h2>
+    <ul>
+      <li>Playwright frameworks should stay close to Playwright’s strengths instead of wrapping everything</li>
+      <li>custom fixtures are the native Playwright way to expose framework objects</li>
+      <li>environment handling must be wired carefully, especially in CI</li>
+      <li>artifact strategy matters as much as test execution</li>
+      <li>GitHub Actions is a strong starting point, but enterprise scale needs better orchestration patterns</li>
+    </ul>
+
+    <p class="small">Generated as a follow-up reference after the first Playwright learning PDF.</p>
+  </main>
+</body>
+</html>
