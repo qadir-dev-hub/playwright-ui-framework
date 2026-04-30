@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WDIO and Appium Android Test Process</title>
+  <style>
+    body {
+      color: #172033;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    main {
+      margin: 0 auto;
+      max-width: 820px;
+      padding: 32px;
+    }
+
+    h1 {
+      color: #102a43;
+      font-size: 28px;
+      margin: 0 0 24px;
+    }
+
+    h2 {
+      border-bottom: 1px solid #d9e2ec;
+      color: #243b53;
+      font-size: 20px;
+      margin: 28px 0 12px;
+      padding-bottom: 6px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ul, ol {
+      margin: 0 0 18px 24px;
+      padding: 0;
+    }
+
+    li {
+      margin: 0 0 8px;
+    }
+
+    pre {
+      background: #f5f7fa;
+      border: 1px solid #d9e2ec;
+      border-radius: 6px;
+      color: #102a43;
+      font-size: 13px;
+      margin: 10px 0 18px;
+      overflow-wrap: break-word;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+
+    code {
+      background: #f5f7fa;
+      border-radius: 4px;
+      padding: 1px 4px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>WDIO and Appium Android Test Process</h1>
+
+    <h2>Node Dependencies</h2>
+    <p>Yes, they are all Node/npm dependencies, but they play different roles.</p>
+
+    <p><code>appium</code><br>
+    The Appium server package. It starts the automation server that talks to Android through drivers.</p>
+
+    <p><code>appium-uiautomator2-driver</code><br>
+    The Android automation driver used by Appium. It knows how to automate native Android apps using Google's UiAutomator2 framework.</p>
+
+    <p><code>@wdio/appium-service</code><br>
+    A WebdriverIO service package. It starts and stops the Appium server automatically when you run WDIO tests, so you do not have to manually run <code>appium</code> first.</p>
+
+    <p>In your setup:</p>
+
+    <pre>WebdriverIO test
+   ↓
+@wdio/appium-service starts Appium
+   ↓
+appium receives WebDriver commands
+   ↓
+appium-uiautomator2-driver talks to Android emulator/device
+   ↓
+Native Android app is automated</pre>
+
+    <p>So yes: all are installed through <code>npm</code>, live under <code>node_modules</code>, and are used by your WDIO mobile test runner.</p>
+
+    <h2>Current Android Test Process</h2>
+    <p>When you run this from the project root:</p>
+
+    <pre>npm run test:mobile:android</pre>
+
+    <p>this is what happens:</p>
+
+    <ol>
+      <li>npm runs the script from <code>package.json</code>:</li>
+    </ol>
+
+    <pre>wdio run config/wdio.android.conf.ts</pre>
+
+    <ol start="2">
+      <li>WebdriverIO loads <code>wdio.android.conf.ts</code>.</li>
+    </ol>
+
+    <p>That config tells WDIO:</p>
+
+    <pre>Which tests to run:
+tests/mobile/android/**/*.spec.ts
+
+Which device to use:
+Pixel 5 / emulator-5554 / Android 11
+
+Which APK to install/open:
+Mobile_apps/Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
+
+Which automation engine:
+UiAutomator2
+
+Which Appium server:
+127.0.0.1:4723</pre>
+
+    <ol start="3">
+      <li><code>@wdio/appium-service</code> starts a local Appium server.</li>
+    </ol>
+
+    <p>You do not need to manually run:</p>
+
+    <pre>appium</pre>
+
+    <p>WDIO starts it for you.</p>
+
+    <ol start="4">
+      <li>Appium receives the session request from WDIO.</li>
+    </ol>
+
+    <p>Appium looks at the capabilities:</p>
+
+    <pre>platformName: Android
+automationName: UiAutomator2
+app: Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
+udid: emulator-5554</pre>
+
+    <ol start="5">
+      <li>Appium uses <code>appium-uiautomator2-driver</code>.</li>
+    </ol>
+
+    <p>That driver connects to the Android emulator through ADB, installs/opens the APK, and prepares the native automation session.</p>
+
+    <ol start="6">
+      <li>WDIO starts your test file:</li>
+    </ol>
+
+    <pre>tests/mobile/android/smoke/login.spec.ts</pre>
+
+    <p>The test creates screen objects:</p>
+
+    <pre>const loginScreen = new LoginScreen();
+const productsScreen = new ProductsScreen();</pre>
+
+    <ol start="7">
+      <li>The screen object performs actions using WDIO selectors.</li>
+    </ol>
+
+    <p>For example, <code>login.screen.ts</code> does:</p>
+
+    <pre>$('~test-Username').setValue('standard_user')
+$('~test-Password').setValue('secret_sauce')
+$('~test-LOGIN').click()</pre>
+
+    <ol start="8">
+      <li>After login, <code>products.screen.ts</code> validates:</li>
+    </ol>
+
+    <pre>PRODUCTS</pre>
+
+    <ol start="9">
+      <li>When the test finishes, WDIO closes the Appium session.</li>
+      <li><code>@wdio/appium-service</code> stops the Appium server it started.</li>
+    </ol>
+
+    <p>So the simple version is:</p>
+
+    <pre>npm script
+ → WDIO config
+ → WDIO starts Appium
+ → Appium starts UiAutomator2 session on emulator
+ → test uses screen objects
+ → WDIO/Appium automate the app
+ → assertion checks PRODUCTS
+ → session and server shut down</pre>
+  </main>
+</body>
+</html>
