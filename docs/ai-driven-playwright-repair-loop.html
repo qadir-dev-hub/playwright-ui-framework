@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Driven Playwright Failure Analysis And Repair Loop</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+
+    h1 { font-size: 32px; margin-bottom: 18px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+      background: rgba(15, 106, 100, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>AI-Driven Playwright Failure Analysis And Repair Loop</h1>
+<p>This document explains, from scratch, how to build a workflow where an AI agent can:</p>
+<ol>
+<li>run a Playwright test</li>
+<li>detect a failure</li>
+<li>inspect logs and generated artifacts</li>
+<li>inspect the browser state with Playwright MCP</li>
+<li>update framework code</li>
+<li>rerun the test</li>
+<li>verify the fix</li>
+</ol>
+<p>This is not a &quot;magic self-healing test&quot; idea. It is a practical engineering loop built from a few capabilities working together.</p>
+<h2>1. The Big Picture</h2>
+<p>To make this work, the AI needs access to five things:</p>
+<ol>
+<li>Test execution</li>
+<li>Failure artifacts</li>
+<li>Browser investigation</li>
+<li>Code editing</li>
+<li>Verification reruns</li>
+</ol>
+<p>If any one of those is missing, the loop becomes weak.</p>
+<p>For example:</p>
+<ul>
+<li>if the AI can run tests but cannot read artifacts, it will guess</li>
+<li>if it can read artifacts but cannot inspect the live browser, it may misdiagnose UI issues</li>
+<li>if it can inspect the browser but cannot edit code, it cannot fix anything</li>
+<li>if it can patch code but cannot rerun, it cannot verify whether the fix worked</li>
+</ul>
+<h2>2. What Each Layer Does</h2>
+<h3>Layer 1: Playwright test runner</h3>
+<p>This is how the AI runs tests and reproduces failures.</p>
+<p>Examples:</p>
+<pre><code class="language-powershell">npx playwright test
+npx playwright test tests/login.spec.ts
+npx playwright test tests/login.spec.ts --project=chromium</code></pre>
+<h3>Layer 2: Playwright artifacts</h3>
+<p>This is how the AI understands what failed.</p>
+<p>Useful artifacts:</p>
+<ul>
+<li>terminal error output</li>
+<li>HTML report</li>
+<li>JSON report</li>
+<li>trace</li>
+<li>screenshot</li>
+<li>video</li>
+<li><code>error-context.md</code></li>
+</ul>
+<h3>Layer 3: Playwright MCP</h3>
+<p>This is how the AI interactively inspects the browser and reproduces the failure in a live session.</p>
+<p>Useful for:</p>
+<ul>
+<li>checking whether the element really exists</li>
+<li>testing locators quickly</li>
+<li>inspecting console output</li>
+<li>inspecting network requests</li>
+<li>checking frames, popups, or auth state</li>
+</ul>
+<h3>Layer 4: Code editing</h3>
+<p>This is how the AI applies a fix to:</p>
+<ul>
+<li>page objects</li>
+<li>tests</li>
+<li>fixtures</li>
+<li>config</li>
+<li>environment handling</li>
+</ul>
+<h3>Layer 5: Rerun and verification</h3>
+<p>This is how the AI confirms the fix is real.</p>
+<p>The AI should rerun:</p>
+<ol>
+<li>the exact failed test first</li>
+<li>nearby related tests second</li>
+<li>broader coverage only if needed</li>
+</ol>
+<h2>3. The Minimum Viable Architecture</h2>
+<p>A practical AI-repair setup looks like this:</p>
+<pre><code class="language-text">AI agent
+  -&gt; runs Playwright test
+  -&gt; reads logs + artifacts
+  -&gt; uses Playwright MCP to inspect live browser state
+  -&gt; edits framework code
+  -&gt; reruns targeted tests</code></pre>
+<p>In your project, that means:</p>
+<pre><code class="language-text">playwright-ui-framework/
+  pages/
+  fixtures/
+  tests/
+  config/
+  environments/
+  playwright/
+    .auth/
+  playwright-report/
+  test-results/
+  docs/</code></pre>
+<h2>4. What You Need In The Repo</h2>
+<p>To support this loop well, your repo should provide:</p>
+<h3>A. Stable framework structure</h3>
+<p>Keep failures easy to patch by having:</p>
+<ul>
+<li>locators in page objects</li>
+<li>shared setup in fixtures</li>
+<li>environment values in config and env files</li>
+<li>auth state in setup tests or setup projects</li>
+</ul>
+<p>This reduces guesswork about where the fix belongs.</p>
+<h3>B. Good artifact generation</h3>
+<p>The AI needs more than terminal output.</p>
+<p>Your current config already keeps:</p>
+<ul>
+<li>trace on retry</li>
+<li>screenshot on failure</li>
+<li>video on failure</li>
+</ul>
+<p>That is a good start.</p>
+<h2>5. Recommended Playwright Config For AI Debugging</h2>
+<p>For an AI-friendly failure analysis loop, I recommend this style:</p>
+<pre><code class="language-ts">import { defineConfig, devices } from &#39;@playwright/test&#39;;
+import dotenv from &#39;dotenv&#39;;
+import fs from &#39;fs&#39;;
+import path from &#39;path&#39;;
+
+const testEnv = process.env.ENV ?? &#39;qa&#39;;
+const envFile = path.resolve(__dirname, &#39;environments&#39;, `.env.${testEnv}`);
+
+if (!fs.existsSync(envFile)) {
+  throw new Error(`Environment file not found: ${envFile}`);
+}
+
+dotenv.config({ path: envFile });
+
+console.log(`Running tests against environment: ${testEnv}`);
+console.log(`Using env file: ${envFile}`);
+console.log(`Base URL: ${process.env.BASE_URL}`);
+
+export default defineConfig({
+  testDir: &#39;./tests&#39;,
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 1,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [
+    [&#39;html&#39;],
+    [&#39;json&#39;, { outputFile: &#39;test-results/results.json&#39; }],
+  ],
+  use: {
+    baseURL: process.env.BASE_URL,
+    trace: &#39;retain-on-failure&#39;,
+    screenshot: &#39;only-on-failure&#39;,
+    video: &#39;retain-on-failure&#39;,
+  },
+  projects: [
+    {
+      name: &#39;chromium&#39;,
+      use: { ...devices[&#39;Desktop Chrome&#39;] },
+    },
+  ],
+});</code></pre>
+<h3>Why this is better for AI</h3>
+<p>Because it gives the AI:</p>
+<ul>
+<li>visible environment context</li>
+<li>HTML report for humans</li>
+<li>JSON report for machine parsing</li>
+<li>trace for deep debugging</li>
+<li>screenshot and video for visual confirmation</li>
+</ul>
+<h2>6. Why JSON Reporting Matters</h2>
+<p>JSON output is one of the most important additions.</p>
+<p>Without it, the AI often has to infer structure from terminal text.</p>
+<p>With it, the AI can parse:</p>
+<ul>
+<li>failing test name</li>
+<li>file path</li>
+<li>line number</li>
+<li>project/browser</li>
+<li>attachment references</li>
+<li>retry behavior</li>
+</ul>
+<p>This makes automated diagnosis much more reliable.</p>
+<h2>7. Artifact Files The AI Should Read</h2>
+<p>When a test fails, the AI should check these in order:</p>
+<ol>
+<li>terminal output</li>
+<li><code>test-results/results.json</code></li>
+<li>test-specific <code>error-context.md</code></li>
+<li>screenshot</li>
+<li>trace</li>
+<li>video if necessary</li>
+</ol>
+<h3>Typical artifact paths</h3>
+<pre><code class="language-text">playwright-report/
+test-results/
+test-results/results.json
+test-results/&lt;failed-test-folder&gt;/error-context.md
+test-results/&lt;failed-test-folder&gt;/trace.zip
+test-results/&lt;failed-test-folder&gt;/test-failed-1.png
+test-results/&lt;failed-test-folder&gt;/video.webm</code></pre>
+<h2>8. What The AI Should Look For First</h2>
+<p>When the AI begins diagnosis, it should not start by changing code.</p>
+<p>It should first ask:</p>
+<ol>
+<li>Did the page open successfully?</li>
+<li>Was the correct environment loaded?</li>
+<li>Was the user authenticated if required?</li>
+<li>Is the failing locator wrong or too broad?</li>
+<li>Is the test expecting the wrong state?</li>
+<li>Is the issue timing, data, auth, frame, popup, or real app behavior?</li>
+</ol>
+<p>This avoids random patching.</p>
+<h2>9. Where Playwright MCP Fits</h2>
+<p>Playwright MCP should be used after the AI has read the failure artifacts and needs to inspect the app live.</p>
+<p>MCP is best for:</p>
+<ul>
+<li>reproducing the failing UI path</li>
+<li>inspecting the current page structure</li>
+<li>checking console messages</li>
+<li>checking network requests</li>
+<li>confirming whether a locator is still valid</li>
+<li>identifying frame and popup issues</li>
+<li>checking whether auth state is really present</li>
+</ul>
+<p>MCP is not the whole repair system. It is the browser investigation layer.</p>
+<h2>10. The Full Failure Repair Loop</h2>
+<p>This is the practical sequence I recommend.</p>
+<h3>Step 1: run the failing test</h3>
+<p>Run the smallest useful target.</p>
+<p>Example:</p>
+<pre><code class="language-powershell">npx playwright test tests/auth-with-storage-state.spec.ts</code></pre>
+<p>If the failure came from CI, rerun only that specific test locally first.</p>
+<h3>Step 2: parse the failure</h3>
+<p>Read:</p>
+<ul>
+<li>the failing line</li>
+<li>the assertion text</li>
+<li>the test title</li>
+<li>the browser/project</li>
+<li>the attachment paths</li>
+</ul>
+<h3>Step 3: inspect JSON report</h3>
+<p>Read <code>test-results/results.json</code> to confirm:</p>
+<ul>
+<li>exact test ID</li>
+<li>project name</li>
+<li>retry count</li>
+<li>attachment references</li>
+</ul>
+<h3>Step 4: inspect visual artifacts</h3>
+<p>Read:</p>
+<ul>
+<li>screenshot</li>
+<li><code>error-context.md</code></li>
+<li>trace</li>
+</ul>
+<p>This often already reveals the root cause.</p>
+<p>Examples:</p>
+<ul>
+<li>browser is on the wrong URL</li>
+<li>a DNS error page opened</li>
+<li>modal did not open</li>
+<li>a popup stole focus</li>
+<li>the wrong text is displayed</li>
+</ul>
+<h3>Step 5: reproduce with MCP</h3>
+<p>Use Playwright MCP to:</p>
+<ul>
+<li>open the same route</li>
+<li>use the same auth state if needed</li>
+<li>inspect the real element tree</li>
+<li>verify the page assumptions interactively</li>
+</ul>
+<h3>Step 6: classify the failure</h3>
+<p>The AI should decide which category fits best:</p>
+<ul>
+<li>locator drift</li>
+<li>assertion mismatch</li>
+<li>timing issue</li>
+<li>missing auth state</li>
+<li>wrong environment</li>
+<li>frame or popup handling issue</li>
+<li>data dependency issue</li>
+<li>real application defect</li>
+</ul>
+<h3>Step 7: patch the smallest correct place</h3>
+<p>Examples:</p>
+<ul>
+<li>page object if locator changed</li>
+<li>fixture if setup is wrong</li>
+<li>config if base URL or storage state is wrong</li>
+<li>test file if the assertion is incorrect</li>
+</ul>
+<h3>Step 8: rerun the same test</h3>
+<p>Always verify with the smallest rerun first.</p>
+<p>Example:</p>
+<pre><code class="language-powershell">npx playwright test tests/auth-with-storage-state.spec.ts --headed</code></pre>
+<h3>Step 9: rerun nearby related tests</h3>
+<p>If the fix touched a shared page object or fixture, run related tests too.</p>
+<h3>Step 10: summarize root cause and fix</h3>
+<p>The AI should leave behind a short explanation:</p>
+<ul>
+<li>what failed</li>
+<li>why it failed</li>
+<li>what changed</li>
+<li>what was rerun</li>
+</ul>
+<h2>11. What The AI Can Fix Well</h2>
+<p>This system works best for:</p>
+<ul>
+<li>broken locators</li>
+<li>stale text assertions</li>
+<li>auth or storage state problems</li>
+<li>config mistakes</li>
+<li>retry/report/artifact misconfiguration</li>
+<li>page object drift after UI changes</li>
+<li>frame or popup handling issues</li>
+</ul>
+<h2>12. What The AI May Not Be Able To Fix Automatically</h2>
+<p>This system is much weaker when the issue is:</p>
+<ul>
+<li>a true backend outage</li>
+<li>a real app defect</li>
+<li>an unclear business rule</li>
+<li>unstable test data across environments</li>
+<li>a hidden permissions/security issue</li>
+</ul>
+<p>In those cases, the AI can often still diagnose and explain the problem, even if it should not auto-fix it.</p>
+<h2>13. Local Loop vs CI Loop</h2>
+<p>There are two useful operating modes.</p>
+<h3>Local loop</h3>
+<p>The AI:</p>
+<ul>
+<li>runs the test locally</li>
+<li>reads local artifacts</li>
+<li>uses local MCP</li>
+<li>patches code</li>
+<li>reruns locally</li>
+</ul>
+<p>This is the easiest version to implement and the best place to start.</p>
+<h3>CI-assisted loop</h3>
+<p>The AI:</p>
+<ul>
+<li>receives CI failure context</li>
+<li>reads uploaded artifacts</li>
+<li>checks out code</li>
+<li>reproduces locally or in a separate runner</li>
+<li>patches on a branch</li>
+<li>reruns targeted tests</li>
+</ul>
+<p>This is more powerful, but also more complex.</p>
+<h2>14. Recommended CI Pattern</h2>
+<p>If you want this to work from GitHub Actions, your workflow should:</p>
+<ol>
+<li>run tests</li>
+<li>always upload artifacts on failure</li>
+<li>keep machine-readable results</li>
+<li>allow an AI agent to access:</li>
+</ol>
+<ul>
+<li>repo code</li>
+<li>workflow logs</li>
+<li>uploaded artifacts</li>
+<li>a branch for fixes</li>
+</ul>
+<p>Example artifact upload step:</p>
+<pre><code class="language-yaml">- name: Upload Playwright report
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: playwright-report
+    path: |
+      playwright-report/
+      test-results/
+    retention-days: 7</code></pre>
+<h2>15. How To Make MCP Use The Same Auth As The Framework</h2>
+<p>This is one of the best ways to align the two systems.</p>
+<p>If your framework writes:</p>
+<pre><code class="language-text">playwright/.auth/student.json</code></pre>
+<p>then MCP can reuse it.</p>
+<p>Conceptually:</p>
+<pre><code class="language-text">Playwright auth setup test -&gt; saves storage state
+MCP isolated session -&gt; loads same storage state
+AI explores authenticated UI with the same session model as the test framework</code></pre>
+<p>This helps the AI reproduce authenticated failures accurately.</p>
+<h2>16. Recommended Documentation In The Repo</h2>
+<p>Add a dedicated docs area for this repair loop.</p>
+<p>Suggested structure:</p>
+<pre><code class="language-text">docs/
+  ai-driven-playwright-repair-loop.md
+  playwright-mcp/
+    setup.md
+    debugging.md
+    recipes.md</code></pre>
+<p>This keeps the workflow understandable for future-you or teammates.</p>
+<h2>17. A Realistic Example</h2>
+<p>Suppose this test fails:</p>
+<pre><code class="language-text">tests/auth-with-storage-state.spec.ts</code></pre>
+<p>with:</p>
+<pre><code class="language-text">Expected Log out link to be visible</code></pre>
+<p>A strong AI loop would do this:</p>
+<ol>
+<li>rerun only <code>auth-with-storage-state.spec.ts</code></li>
+<li>read <code>results.json</code></li>
+<li>inspect screenshot and trace</li>
+<li>see whether the page is actually logged out</li>
+<li>use MCP with the same storage state file</li>
+<li>confirm whether the saved auth file expired or the page changed</li>
+<li>patch:</li>
+</ol>
+<ul>
+<li>auth setup</li>
+<li>login page object</li>
+<li>storage state path</li>
+<li>or the assertion itself</li>
+</ul>
+<ol>
+<li>rerun the same test</li>
+<li>rerun auth-related tests</li>
+</ol>
+<p>That is a realistic, high-value loop.</p>
+<h2>18. Practical Improvements For Your Current Repo</h2>
+<p>For your current <code>playwright-ui-framework</code>, I would recommend:</p>
+<ol>
+<li>Add JSON reporting to <code>playwright.config.ts</code></li>
+<li>Keep <code>trace: &#39;retain-on-failure&#39;</code></li>
+<li>Keep screenshots and video on failure</li>
+<li>Ensure auth setup files are easy to rerun in isolation</li>
+<li>Keep page objects small and patchable</li>
+<li>Add a short MCP debugging note in docs</li>
+</ol>
+<h2>19. Suggested Commands The AI Should Use</h2>
+<p>Examples the AI would use during the loop:</p>
+<pre><code class="language-powershell">npx playwright test tests/auth.setup.spec.ts
+npx playwright test tests/auth-with-storage-state.spec.ts
+npx playwright test tests/practice-form.spec.ts --headed
+npx playwright show-report</code></pre>
+<p>And for traces:</p>
+<pre><code class="language-powershell">npx playwright show-trace test-results/&lt;failed-test-folder&gt;/trace.zip</code></pre>
+<h2>20. The Most Important Design Rule</h2>
+<p>The most important rule in this whole document is:</p>
+<pre><code class="language-text">Use MCP to investigate.
+Use framework code to encode the solution.
+Use Playwright test reruns to verify the fix.</code></pre>
+<p>That is the difference between a useful AI-assisted repair loop and an unstable pile of one-off agent actions.</p>
+<h2>21. Final Recommendation</h2>
+<p>Start with the local version of this loop first.</p>
+<p>That means:</p>
+<ol>
+<li>improve artifact output</li>
+<li>keep your framework structure clean</li>
+<li>use MCP for browser-side investigation</li>
+<li>let the AI patch code locally</li>
+<li>rerun targeted tests</li>
+</ol>
+<p>Once that feels solid, extend the same pattern to CI.</p>
+<h2>22. Optional Next Step</h2>
+<p>If you want, the next useful deliverable after this documentation would be:</p>
+<ul>
+<li>a concrete repo implementation checklist, or</li>
+<li>actual updates to your <code>playwright.config.ts</code> and CI workflow to make your current framework AI-repair-friendly.</li>
+</ul>
+  </main>
+</body>
+</html>

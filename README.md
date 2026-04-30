@@ -19,6 +19,7 @@ This project is being built as a learning-first but professional framework found
 - Custom fixture wiring
 - Screenshot, video, and trace support for failed or retried tests
 - First working sample around the DemoQA Practice Form
+- Project-level WDIO MCP config for Android native-app automation via Appium
 
 ## Project Structure
 
@@ -186,3 +187,5 @@ This demonstrates:
 ## Notes
 
 This project is intentionally being built step by step from scratch to support both framework quality and Playwright learning.
+
+For native-app automation through WebdriverIO MCP, see [docs/wdio-mcp-native-apps.md](/c:/Studies/Agentic%20AI/playwright-ui-framework/docs/wdio-mcp-native-apps.md).

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MCP + Android Emulator Setup Reference</title>
+  <style>
+    :root {
+      --ink: #1f2937;
+      --muted: #4b5563;
+      --border: #d1d5db;
+      --panel: #f8fafc;
+      --accent: #b91c1c;
+      --accent-soft: #fee2e2;
+      --code: #111827;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color: var(--ink);
+      background: #ffffff;
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 36px 44px 48px;
+    }
+
+    h1, h2, h3 { margin: 0 0 12px; line-height: 1.2; }
+    h1 {
+      font-size: 34px;
+      color: #111827;
+      letter-spacing: 0;
+    }
+    h2 {
+      margin-top: 28px;
+      font-size: 21px;
+      color: #111827;
+      padding-top: 10px;
+      border-top: 2px solid #e5e7eb;
+    }
+    h3 {
+      margin-top: 18px;
+      font-size: 16px;
+      color: #111827;
+    }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 14px 22px; padding: 0; }
+    li { margin: 0 0 6px; }
+
+    .lede {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 18px;
+    }
+
+    .callout {
+      background: linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
+      border: 1px solid #fecaca;
+      border-left: 6px solid var(--accent);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 18px 0;
+    }
+
+    .meta {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 18px 0 24px;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.94em;
+      color: var(--code);
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 14px 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 0 0 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      background: #fff;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+
+    .footer {
+      margin-top: 34px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e7eb;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { max-width: none; padding: 18mm 14mm; }
+      a { color: inherit; text-decoration: none; }
+      h2 { break-after: avoid; }
+      pre, .card, .callout, .meta { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>MCP + Android Emulator Setup Reference</h1>
+    <p class="lede">
+      This is the practical handoff for reproducing the Android native-app MCP setup used in this repo on Windows. It combines the repo MCP config, the native-app docs, and the exact fixes needed to make the session work on this machine.
+    </p>
+
+    <section class="meta">
+      <p><strong>Repo root:</strong> <code>C:\Studies\Agentic AI\playwright-ui-framework</code></p>
+      <p><strong>APK used:</strong> <code>C:\Studies\Agentic AI\playwright-ui-framework\Mobile_apps\Android.SauceLabs.Mobile.Sample.app.2.7.1.apk</code></p>
+      <p><strong>Working emulator:</strong> <code>Pixel 5</code>, <code>emulator-5554</code>, Android <code>11</code></p>
+    </section>
+
+    <h2>1. What This Setup Does</h2>
+    <ol>
+      <li>Android Studio provides the Android SDK and emulator.</li>
+      <li>Appium provides native Android automation.</li>
+      <li>The <code>uiautomator2</code> Appium driver drives the app on the emulator.</li>
+      <li>MCP uses the repo-level <code>.mcp.json</code> file to talk to Appium.</li>
+      <li>A PowerShell helper script starts Appium with the Windows environment variables it needs.</li>
+    </ol>
+
+    <h2>2. Files In This Repo That Matter</h2>
+    <h3><code>.mcp.json</code></h3>
+    <pre><code>{
+  "mcpServers": {
+    "wdio-mcp": {
+      "command": "npx",
+      "args": ["-y", "@wdio/mcp"],
+      "env": {
+        "APPIUM_URL": "127.0.0.1",
+        "APPIUM_URL_PORT": "4723",
+        "APPIUM_PATH": "/"
+      }
+    }
+  }
+}</code></pre>
+    <p>This tells MCP to use <code>@wdio/mcp</code> and connect to Appium at <code>http://127.0.0.1:4723/</code>.</p>
+
+    <h3>Helper script</h3>
+    <p>The repo also contains <code>scripts/create-native-android-session.ps1</code>. It kills old Appium processes, sets SDK and Java environment variables, starts Appium, and creates the working Android session.</p>
+
+    <h2>3. Software Needed On A New Windows Computer</h2>
+    <ol>
+      <li>Install Node.js.</li>
+      <li>Install Android Studio.</li>
+      <li>Install Appium globally.</li>
+      <li>Install the Appium <code>uiautomator2</code> driver.</li>
+      <li>Clone this repo and install the repo dependencies.</li>
+    </ol>
+    <pre><code>npm install -g appium
+appium driver install uiautomator2</code></pre>
+    <p>If PowerShell blocks <code>appium.ps1</code>, use <code>appium.cmd</code> instead. On this machine that path was <code>C:\Users\aqadi\AppData\Roaming\npm\appium.cmd</code>.</p>
+
+    <h2>4. Android Studio And Emulator Setup</h2>
+    <ol>
+      <li>Install Android Studio.</li>
+      <li>Install the Android SDK.</li>
+      <li>Make sure <code>platform-tools</code>, <code>build-tools</code>, and an Android 11 system image are installed.</li>
+      <li>Create an AVD in Device Manager.</li>
+      <li>Start the emulator before asking the AI to create the session.</li>
+    </ol>
+    <p>The working emulator here was effectively a <code>Pixel 5</code> profile on Android <code>11</code>, visible to ADB as <code>emulator-5554</code>.</p>
+    <pre><code>adb devices</code></pre>
+    <p>If <code>adb</code> is not on <code>PATH</code>, call it with its full SDK path. On this machine it was <code>C:\Users\aqadi\AppData\Local\Android\Sdk\platform-tools\adb.exe</code>.</p>
+
+    <h2>5. Windows-Specific Fixes We Needed</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>ADB not on PATH</h3>
+        <p>Use the full path to <code>adb.exe</code>, or add the SDK <code>platform-tools</code> folder to <code>PATH</code>.</p>
+      </div>
+      <div class="card">
+        <h3>PowerShell blocked Appium</h3>
+        <p>Use <code>appium.cmd</code> instead of <code>appium</code> if <code>appium.ps1</code> is blocked by execution policy.</p>
+      </div>
+      <div class="card">
+        <h3>Appium could not find Android SDK</h3>
+        <pre><code>$env:ANDROID_HOME="C:\Users\aqadi\AppData\Local\Android\Sdk"
+$env:ANDROID_SDK_ROOT="C:\Users\aqadi\AppData\Local\Android\Sdk"</code></pre>
+      </div>
+      <div class="card">
+        <h3>Appium could not find Java</h3>
+        <pre><code>$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+$env:PATH="$env:JAVA_HOME\bin;$env:PATH"</code></pre>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>Important activity fix:</strong> the APK initially looked like it would launch through a splash activity, but the stable activity was <code>com.swaglabsmobileapp.MainActivity</code>. The working session needed <code>appPackage</code>, <code>appActivity</code>, and <code>appWaitActivity</code> all aligned to that app.</p>
+    </div>
+
+    <h2>6. Working Session Settings</h2>
+    <pre><code>{
+  "platformName": "Android",
+  "appium:automationName": "UiAutomator2",
+  "appium:deviceName": "Pixel 5",
+  "appium:udid": "emulator-5554",
+  "appium:platformVersion": "11",
+  "appium:app": "C:\\Studies\\Agentic AI\\playwright-ui-framework\\Mobile_apps\\Android.SauceLabs.Mobile.Sample.app.2.7.1.apk",
+  "appium:appPackage": "com.swaglabsmobileapp",
+  "appium:appActivity": "com.swaglabsmobileapp.MainActivity",
+  "appium:appWaitActivity": "com.swaglabsmobileapp.MainActivity",
+  "appium:newCommandTimeout": 120,
+  "appium:noReset": false,
+  "appium:fullReset": false
+}</code></pre>
+
+    <h2>7. Recommended Startup Flow</h2>
+    <ol>
+      <li>Start the Android emulator.</li>
+      <li>Run <code>adb devices</code>.</li>
+      <li>Make sure <code>.mcp.json</code> is present in the repo.</li>
+      <li>Start Appium.</li>
+      <li>If Windows needs it, use the helper script instead of launching Appium manually.</li>
+      <li>Reload the MCP client so it picks up the repo config.</li>
+      <li>Ask the AI to start the native Android session.</li>
+      <li>Continue the test flow from the visible app screen.</li>
+    </ol>
+
+    <h2>8. How We Verified Things During Setup</h2>
+    <pre><code>adb devices
+appium.cmd -v
+appium.cmd driver list --installed
+Invoke-RestMethod -Uri "http://127.0.0.1:4723/status" -Method Get</code></pre>
+    <p>The most useful log files were <code>appium-native-session.log</code> and <code>appium-native-session.err.log</code>. They showed missing SDK variables, missing Java, wrong activity names, and session creation failures very quickly.</p>
+
+    <h2>9. Login Credentials Seen In The App</h2>
+    <p>The visible hint panel on the login screen showed these usernames:</p>
+    <ul>
+      <li><code>standard_user</code></li>
+      <li><code>locked_out_user</code></li>
+      <li><code>problem_user</code></li>
+    </ul>
+    <p>The password shown for all users was <code>secret_sauce</code>. The successful login used <code>standard_user</code> and <code>secret_sauce</code>.</p>
+
+    <h2>10. Short Prompt To Reuse Later</h2>
+    <pre><code>Start the Android Appium session on emulator-5554 and open the Swag Labs APK, then continue from there.</code></pre>
+    <p>More explicit version:</p>
+    <pre><code>Start a native Android Appium session with:
+deviceName: Pixel 5
+udid: emulator-5554
+platformVersion: 11
+appPath: C:\Studies\Agentic AI\playwright-ui-framework\Mobile_apps\Android.SauceLabs.Mobile.Sample.app.2.7.1.apk
+
+If needed, use the existing helper script in the repo to bring Appium up, then launch the app and continue with the test flow.</code></pre>
+
+    <h2>11. What To Change On Another Computer</h2>
+    <ol>
+      <li>Android SDK path</li>
+      <li>Java path</li>
+      <li>Global npm path to <code>appium.cmd</code></li>
+      <li>Emulator name or UDID</li>
+      <li>APK path</li>
+    </ol>
+    <p>The MCP config itself can stay the same as long as Appium still runs locally at <code>127.0.0.1:4723</code>.</p>
+
+    <h2>12. Troubleshooting Checklist</h2>
+    <ol>
+      <li>Make sure the emulator is booted.</li>
+      <li>Run <code>adb devices</code>.</li>
+      <li>Confirm <code>uiautomator2</code> is installed.</li>
+      <li>Confirm Appium is listening on port <code>4723</code>.</li>
+      <li>Confirm <code>ANDROID_HOME</code> and <code>ANDROID_SDK_ROOT</code> are set.</li>
+      <li>Confirm <code>JAVA_HOME</code> points to a valid Java runtime.</li>
+      <li>Check the Appium log for the exact failing step.</li>
+      <li>If the app launches but Appium times out, confirm the real activity and update <code>appWaitActivity</code>.</li>
+    </ol>
+
+    <h2>13. Useful Local Files</h2>
+    <ul>
+      <li><code>docs/wdio-mcp-native-apps.md</code></li>
+      <li><code>.mcp.json</code></li>
+      <li><code>scripts/create-native-android-session.ps1</code></li>
+      <li><code>appium-native-session.log</code></li>
+      <li><code>appium-native-session.err.log</code></li>
+    </ul>
+
+    <h2>14. Final Outcome On This Machine</h2>
+    <ul>
+      <li>Appium running at <code>http://127.0.0.1:4723</code></li>
+      <li>emulator visible as <code>emulator-5554</code></li>
+      <li>native Android session created successfully</li>
+      <li>Swag Labs app opened successfully</li>
+      <li>login completed successfully</li>
+      <li>app landed on the <code>PRODUCTS</code> screen</li>
+    </ul>
+
+    <p class="footer">Generated from the repo MCP setup, the native-app setup doc, and the exact working Windows session used in this project.</p>
+  </main>
+</body>
+</html>

@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "test": "playwright test",
-  "test:headed": "playwright test --headed",
-  "test:debug": "playwright test --debug",
-  "report": "playwright show-report"
-}
-,
+  "scripts": {
+    "test": "playwright test",
+    "test:web": "playwright test --project=chromium --project=\"Mobile Chrome\"",
+    "test:mobile:android": "wdio run config/wdio.android.conf.ts",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "appium:start": "powershell -ExecutionPolicy Bypass -File scripts/start-appium-native-session.ps1",
+    "mobile:android:session": "powershell -ExecutionPolicy Bypass -File scripts/create-native-android-session.ps1"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,10 +20,15 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.5.0",
-    "dotenv": "^17.3.1"
+    "@wdio/appium-service": "^9.27.0",
+    "@wdio/cli": "^9.27.0",
+    "@wdio/globals": "^9.27.0",
+    "@wdio/local-runner": "^9.27.0",
+    "@wdio/mocha-framework": "^9.27.0",
+    "@wdio/spec-reporter": "^9.27.0",
+    "appium": "^3.3.1",
+    "appium-uiautomator2-driver": "^7.1.2",
+    "dotenv": "^17.3.1",
+    "webdriverio": "^9.27.0"
   }
-
-  
 }
-
-

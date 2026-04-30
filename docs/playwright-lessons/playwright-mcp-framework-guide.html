@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playwright MCP Framework Guide</title>
+  <style>
+    :root {
+      --bg: #f4efe5;
+      --paper: #fffdf8;
+      --ink: #1f2937;
+      --muted: #5e6773;
+      --accent: #0f6a64;
+      --accent-soft: #dff3ef;
+      --border: #d7d1c6;
+      --code-bg: #17202b;
+      --code-ink: #f5f8fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: linear-gradient(180deg, #ece3d2 0%, var(--bg) 100%);
+      line-height: 1.58;
+      font-size: 15px;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 40px 48px 56px;
+      box-shadow: 0 18px 50px rgba(49, 39, 28, 0.08);
+    }
+
+    h1, h2, h3 {
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      line-height: 1.2;
+      margin: 0 0 14px;
+    }
+
+    h1 { font-size: 32px; margin-bottom: 8px; }
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      padding-top: 14px;
+      border-top: 2px solid var(--accent-soft);
+    }
+    h3 { font-size: 18px; margin-top: 20px; }
+
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 10px 0 14px 24px; }
+    li { margin: 4px 0; }
+
+    .lead {
+      color: var(--muted);
+      font-size: 17px;
+      margin-bottom: 18px;
+    }
+
+    .note {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin: 16px 0 22px;
+    }
+
+    .toc {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 20px 0 28px;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 12px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+
+    .footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: none;
+        padding: 0;
+      }
+      pre, .toc, .note { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Playwright MCP For Your Framework</h1>
+    <p class="lead">
+      A detailed guide to setting up and using Playwright MCP alongside a real Playwright automation framework, with special attention to your current project style and Codex-based workflow.
+    </p>
+
+    <div class="note">
+      <strong>Main idea:</strong> Playwright MCP is best used as an exploration, debugging, and discovery layer that supports your framework. It should help you build better page objects, locators, and tests. It should not replace a maintainable framework.
+    </div>
+
+    <div class="toc">
+      <h3>Table Of Contents</h3>
+      <ol>
+        <li>What Playwright MCP Is</li>
+        <li>When MCP Is A Good Fit</li>
+        <li>How MCP Differs From Normal Playwright Tests</li>
+        <li>Prerequisites</li>
+        <li>Core Setup For Most MCP Clients</li>
+        <li>Codex Setup</li>
+        <li>Understanding MCP Transport Modes</li>
+        <li>Profiles: Persistent, Isolated, And Extension</li>
+        <li>Storage State With MCP</li>
+        <li>Browser And Runtime Options</li>
+        <li>Standalone HTTP Server Mode</li>
+        <li>Practical MCP Workflows For Your Framework</li>
+        <li>How MCP Fits With Page Objects And Fixtures</li>
+        <li>Recommended Folder And Documentation Strategy</li>
+        <li>Security And Safety Guidance</li>
+        <li>Limits And Tradeoffs</li>
+        <li>What A Good Day-To-Day MCP Workflow Looks Like</li>
+      </ol>
+    </div>
+
+    <h2>1. What Playwright MCP Is</h2>
+    <p>
+      Playwright MCP is an MCP server built on top of Playwright. It lets an MCP client talk to a browser through structured tools instead of asking you to write all browser actions manually. One of its key ideas is that it works from structured accessibility information rather than depending only on screenshot-based reasoning.
+    </p>
+    <p>
+      In practice, that means an agent can open pages, inspect accessible elements, click, type, switch tabs, inspect network requests, capture screenshots, and even save or restore browser state.
+    </p>
+
+    <h2>2. When MCP Is A Good Fit</h2>
+    <p>MCP is especially useful when you are:</p>
+    <ul>
+      <li>exploring a new page quickly</li>
+      <li>discovering good locators</li>
+      <li>debugging a failing flow interactively</li>
+      <li>investigating why a page behaves differently in a real browser</li>
+      <li>mapping an unfamiliar UI before turning it into page object methods</li>
+      <li>running an agentic loop where the browser stays open and context is preserved across steps</li>
+    </ul>
+    <p>MCP is less ideal when you already know exactly what code you want and just need stable committed test files. In that case, normal Playwright test code is usually cleaner and more efficient.</p>
+
+    <h2>3. How MCP Differs From Normal Playwright Tests</h2>
+    <p>Think of the difference like this:</p>
+    <ul>
+      <li>Normal Playwright tests are source code you write, version, review, and run in CI.</li>
+      <li>Playwright MCP is an interactive browser automation interface for an MCP client or agent.</li>
+    </ul>
+    <p>So your framework should still contain:</p>
+    <ul>
+      <li>page objects</li>
+      <li>fixtures</li>
+      <li>tests</li>
+      <li>environment handling</li>
+      <li>CI workflows</li>
+    </ul>
+    <p>MCP should help you produce and debug those assets faster, not replace them.</p>
+
+    <h2>4. Prerequisites</h2>
+    <p>Before setting up Playwright MCP, make sure you have:</p>
+    <ul>
+      <li>Node.js 18 or newer</li>
+      <li>an MCP-capable client such as Codex, VS Code, Cursor, Windsurf, Claude Code, or Claude Desktop</li>
+      <li>Playwright familiarity, especially basic browser automation concepts</li>
+    </ul>
+    <p>Since you already have a working Playwright project, you are past the hard part. The main setup task now is client configuration.</p>
+
+    <h2>5. Core Setup For Most MCP Clients</h2>
+    <p>The standard local configuration pattern is simple: tell the client to launch the Playwright MCP server via <code>npx @playwright/mcp@latest</code>.</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
+}</code></pre>
+
+    <p>This is the default shape that many clients accept, even though each client stores the config in a different place.</p>
+
+    <h2>6. Codex Setup</h2>
+    <p>Because you are working in Codex-style tooling, the most relevant setup path is the Codex MCP configuration.</p>
+    <p>The official Playwright MCP repository documents this Codex CLI command:</p>
+
+    <pre><code>codex mcp add playwright npx "@playwright/mcp@latest"</code></pre>
+
+    <p>You can also configure it directly in Codex config using:</p>
+
+    <pre><code>[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]</code></pre>
+
+    <p>That is the cleanest starting point if you want the Playwright MCP server available to your Codex client without manually retyping the command each time.</p>
+
+    <h3>Recommended practical setup for you</h3>
+    <ol>
+      <li>Keep your framework code in <code>playwright-ui-framework</code>.</li>
+      <li>Add Playwright MCP to your Codex client using the official config.</li>
+      <li>Use MCP for discovery and debugging.</li>
+      <li>Translate useful findings into page objects and tests inside the repo.</li>
+    </ol>
+
+    <h2>7. Understanding MCP Transport Modes</h2>
+    <p>The MCP specification currently defines two standard transport types:</p>
+    <ul>
+      <li><code>stdio</code></li>
+      <li>streamable HTTP</li>
+    </ul>
+    <p>For local setup, <code>stdio</code> is the normal default. In this mode:</p>
+    <ul>
+      <li>the MCP client starts the server as a subprocess</li>
+      <li>the server reads requests from standard input</li>
+      <li>the server writes responses to standard output</li>
+    </ul>
+    <p>This is why a simple local config can just specify a command and args. The client handles the subprocess lifecycle automatically.</p>
+
+    <h3>When HTTP mode matters</h3>
+    <p>HTTP mode becomes useful when:</p>
+    <ul>
+      <li>you want the MCP server running separately from the client process</li>
+      <li>headed browser automation is hard to launch directly from the client environment</li>
+      <li>you want a more service-like setup</li>
+    </ul>
+
+    <h2>8. Profiles: Persistent, Isolated, And Extension</h2>
+    <p>Playwright MCP supports three useful browser state modes.</p>
+
+    <h3>Persistent profile</h3>
+    <p>This is the default. Cookies and login state are preserved between sessions. This feels closest to using a normal browser profile, and it is very useful for exploratory work.</p>
+    <p>Good for:</p>
+    <ul>
+      <li>keeping yourself logged in while exploring a product</li>
+      <li>repeated manual-style workflows with an agent</li>
+      <li>faster iteration when you do not want to log in repeatedly</li>
+    </ul>
+
+    <h3>Isolated mode</h3>
+    <p>In isolated mode, each session starts fresh. When you close the browser, that state is gone. This is closer to test isolation and is often better when you want predictable clean-session behavior.</p>
+    <p>Example config pattern:</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--isolated"
+      ]
+    }
+  }
+}</code></pre>
+
+    <h3>Extension mode</h3>
+    <p>Extension mode lets Playwright MCP connect to an existing Chrome or Edge browser session through the Playwright MCP Bridge extension. This is useful when you want to reuse a live browser with existing tabs and logged-in state.</p>
+
+    <h2>9. Storage State With MCP</h2>
+    <p>Storage state is one of the most useful bridges between your code-based framework and MCP-based workflows.</p>
+    <p>The official Playwright MCP docs and repo describe support for loading storage state in isolated sessions using <code>--storage-state</code>.</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--isolated",
+        "--storage-state=playwright/.auth/student.json"
+      ]
+    }
+  }
+}</code></pre>
+
+    <p>This is especially relevant for your project because you already created:</p>
+    <ul>
+      <li><code>tests/auth.setup.spec.ts</code> to save auth state</li>
+      <li><code>playwright/.auth/student.json</code> as the saved session file</li>
+    </ul>
+
+    <h3>How this helps your framework</h3>
+    <p>You can use MCP with the same saved state your Playwright tests use. That means MCP can start from a known authenticated session instead of forcing you to log in manually every time.</p>
+
+    <h3>Recommended pattern for you</h3>
+    <ol>
+      <li>Create or refresh auth state using your normal Playwright setup test.</li>
+      <li>Point MCP isolated mode at that same storage state file.</li>
+      <li>Use MCP to explore authenticated screens and flows.</li>
+      <li>Convert those discoveries into stable page object methods and tests.</li>
+    </ol>
+
+    <h2>10. Browser And Runtime Options</h2>
+    <p>Playwright MCP supports several useful command-line options that matter in framework work.</p>
+
+    <h3>Headless mode</h3>
+    <p>Playwright MCP runs headed by default according to the Playwright docs. To run headless, add <code>--headless</code>.</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--headless"
+      ]
+    }
+  }
+}</code></pre>
+
+    <h3>Browser selection</h3>
+    <p>You can select a browser with <code>--browser</code>. Supported values in the Playwright docs include <code>chrome</code>, <code>firefox</code>, <code>webkit</code>, and <code>msedge</code>.</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--browser=firefox"
+      ]
+    }
+  }
+}</code></pre>
+
+    <h3>Config file</h3>
+    <p>For more advanced setup, Playwright MCP supports a JSON config file passed with <code>--config</code>.</p>
+
+    <pre><code>npx @playwright/mcp@latest --config path/to/config.json</code></pre>
+
+    <p>This is a good option once your usage becomes more structured and you do not want all options living inline in a client config block.</p>
+
+    <h2>11. Standalone HTTP Server Mode</h2>
+    <p>When direct client-launched browser sessions are awkward, you can run Playwright MCP as a standalone server.</p>
+
+    <pre><code>npx @playwright/mcp@latest --port 8931</code></pre>
+
+    <p>Then point the client at the MCP HTTP endpoint:</p>
+
+    <pre><code>{
+  "mcpServers": {
+    "playwright": {
+      "url": "http://localhost:8931/mcp"
+    }
+  }
+}</code></pre>
+
+    <p>This is useful when:</p>
+    <ul>
+      <li>the client environment has trouble launching a headed browser directly</li>
+      <li>you want the server running continuously outside the client lifecycle</li>
+      <li>you want to separate server process management from the MCP client itself</li>
+    </ul>
+
+    <h2>12. Practical MCP Workflows For Your Framework</h2>
+    <p>This is where MCP becomes truly useful in your day-to-day project work.</p>
+
+    <h3>Workflow A: page discovery</h3>
+    <ol>
+      <li>Use MCP to open a new page in the app.</li>
+      <li>Inspect the accessibility snapshot.</li>
+      <li>Identify stable roles, labels, text, and test IDs.</li>
+      <li>Write or update the page object based on what you learned.</li>
+    </ol>
+
+    <h3>Workflow B: debugging a failing test</h3>
+    <ol>
+      <li>Take the failing route or page from your normal test run.</li>
+      <li>Use MCP to reproduce the state interactively.</li>
+      <li>Inspect whether the element is really visible, enabled, framed, or missing.</li>
+      <li>Update locators or flow assumptions in the actual test code.</li>
+    </ol>
+
+    <h3>Workflow C: authenticated exploration</h3>
+    <ol>
+      <li>Create or refresh <code>storageState</code> in your normal framework.</li>
+      <li>Start MCP in isolated mode with that stored auth state.</li>
+      <li>Navigate directly to authenticated pages.</li>
+      <li>Explore user paths without repeating login.</li>
+    </ol>
+
+    <h3>Workflow D: API and UI investigation together</h3>
+    <p>If you are using API + UI testing in your framework, MCP can help investigate the UI side quickly after API setup creates the required data.</p>
+
+    <h2>13. How MCP Fits With Page Objects And Fixtures</h2>
+    <p>Here is the most important framework rule:</p>
+    <div class="note">
+      <strong>MCP is for discovery and investigation; page objects and fixtures are for stable framework code.</strong>
+    </div>
+
+    <p>For example:</p>
+    <ul>
+      <li>Use MCP to discover that the best locator is <code>getByRole('button', { name: 'Submit' })</code>.</li>
+      <li>Put that locator into your page object.</li>
+      <li>Use your fixture to inject that page object into tests.</li>
+    </ul>
+
+    <p>Do not leave important workflows only as MCP chat instructions if they belong in the framework as code.</p>
+
+    <h3>Good MCP-to-framework loop</h3>
+
+    <pre><code>1. Explore page with MCP
+2. Identify stable locators and state transitions
+3. Write page object methods
+4. Wire into fixtures if reused
+5. Commit test and framework code
+6. Keep MCP available for future debugging</code></pre>
+
+    <h2>14. Recommended Folder And Documentation Strategy</h2>
+    <p>For your repo, I would keep MCP-related materials lightweight but explicit.</p>
+
+    <p>Suggested additions:</p>
+    <pre><code>docs/
+  playwright-lessons/
+  playwright-mcp/
+    setup.md
+    usage-patterns.md
+    common-recipes.md</code></pre>
+
+    <p>Possible contents:</p>
+    <ul>
+      <li><code>setup.md</code>: client setup, config examples, profile modes</li>
+      <li><code>usage-patterns.md</code>: discovery, debugging, authenticated exploration</li>
+      <li><code>common-recipes.md</code>: inspect iframe, inspect popup, verify locator, inspect logged-in state</li>
+    </ul>
+
+    <p>You do not need to overengineer this. A few focused docs are enough.</p>
+
+    <h2>15. Security And Safety Guidance</h2>
+    <p>Playwright MCP can open pages, manipulate browsers, and in some modes access file paths or persistent profiles. That means setup choices matter.</p>
+
+    <h3>Be careful with persistent profiles</h3>
+    <p>Persistent mode is convenient, but it can also retain cookies and offline state longer than you expect. Use it intentionally.</p>
+
+    <h3>Use isolated mode when you need predictable clean sessions</h3>
+    <p>For framework debugging and test-like behavior, isolated mode is often easier to reason about.</p>
+
+    <h3>Pay attention to file access options</h3>
+    <p>The Playwright MCP repository documents options such as <code>--allow-unrestricted-file-access</code>. That should be enabled only when you truly need it and understand the implications.</p>
+
+    <h3>Limit host access where appropriate</h3>
+    <p>The repository also documents options like <code>--allowed-hosts</code> and <code>--allowed-origins</code>. Those are useful when you want to narrow what the browser is allowed to reach.</p>
+
+    <h2>16. Limits And Tradeoffs</h2>
+    <p>Playwright MCP is powerful, but it is not automatically the best tool for every job.</p>
+
+    <h3>Where it shines</h3>
+    <ul>
+      <li>interactive discovery</li>
+      <li>debugging unknown pages</li>
+      <li>agentic browser workflows</li>
+      <li>preserving browser context while reasoning through a flow</li>
+    </ul>
+
+    <h3>Where normal code is better</h3>
+    <ul>
+      <li>version-controlled regression tests</li>
+      <li>CI pipeline execution</li>
+      <li>repeatable framework assets</li>
+      <li>reviewable business scenarios</li>
+    </ul>
+
+    <p>The Playwright MCP repo itself also notes a tradeoff between CLI-based automation workflows and MCP-based agentic workflows. In other words, MCP is not the universal answer; it is one good tool in a broader automation toolkit.</p>
+
+    <h2>17. What A Good Day-To-Day MCP Workflow Looks Like</h2>
+    <p>If I were designing a clean, realistic workflow for you, it would look like this:</p>
+
+    <ol>
+      <li>Use your normal Playwright framework for committed tests, page objects, auth setup, and CI.</li>
+      <li>Use Playwright MCP when you need to explore a new page or debug a confusing issue quickly.</li>
+      <li>If auth is needed, reuse your existing <code>storageState</code> file through MCP isolated mode or use persistent profile mode deliberately.</li>
+      <li>After the exploration, convert what you learned into framework code.</li>
+      <li>Document any repeatable MCP recipe that the future-you or your teammates will want again.</li>
+    </ol>
+
+    <div class="note">
+      <strong>Best recommendation for your current project:</strong><br>
+      Start with Codex MCP setup, use Playwright MCP for page discovery and debugging, and keep your existing <code>storageState</code>-based framework as the source of truth for real tests.
+    </div>
+
+    <h2>Suggested Next Enhancements For Your Repo</h2>
+    <ul>
+      <li>Add a small MCP setup note to your README.</li>
+      <li>Create a <code>docs/playwright-mcp/</code> folder for internal recipes.</li>
+      <li>Add one “MCP discovery to page object” example in your docs.</li>
+      <li>Optionally create a dedicated environment or profile convention for MCP exploration.</li>
+    </ul>
+
+    <h2>Official Sources Used</h2>
+    <ul>
+      <li>Playwright MCP docs: https://playwright.dev/docs/next/getting-started-mcp</li>
+      <li>Playwright MCP repository: https://github.com/microsoft/playwright-mcp</li>
+      <li>MCP transport specification: https://modelcontextprotocol.io/specification/2025-06-18/basic/transports</li>
+    </ul>
+
+    <p class="footer">Generated as a dedicated add-on guide for integrating Playwright MCP into the Playwright UI Framework learning project.</p>
+  </main>
+</body>
+</html>
